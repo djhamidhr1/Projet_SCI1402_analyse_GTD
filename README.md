@@ -101,4 +101,8 @@ Consulter les résultats dans le dossier output
 
 Contact
 Réalisé par HAMID DIGORGORD
+<<<<<<< HEAD
 TÉLUQ - 2024
+=======
+TÉLUQ - 2024
+>>>>>>> 573f9b3ba657edb1d15203751b62e27e83ed556a
