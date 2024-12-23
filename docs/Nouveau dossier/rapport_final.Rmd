@@ -1,0 +1,3064 @@
+---
+title: "| SCI 1402\n| Projet en science des données\n| \n| Analyse de la base de données
+  mondiale sur le terrorisme\n| Plus de 180 000 attaques terroristes dans le monde,
+  1970-2017\n"
+author: "| HAMID DIGORGORD\n| No d'étudiant : 23110186\n| \n| **Professeur(e)(s) responsable(s)
+  :** \n| Richard Hotte\n| \n| **Ressource à l'encadrement :**\n| Fatima Bensalma\n"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+  pdf_document:
+    toc: true
+    toc_depth: '3'
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 10,
+  fig.height = 6,
+  fig.align = 'center'
+)
+
+# Définir le répertoire de travail
+knitr::opts_knit$set(root.dir = 'C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD')
+
+# Installation et chargement des packages nécessaires
+required_packages <- c(
+    # Packages de base
+    "tidyverse", "knitr", "rmarkdown",
+    
+    # Visualisation
+    "ggplot2", "plotly", "leaflet", "viridis",
+    "gridExtra", "scales", "treemapify",
+    
+    # Analyse statistique
+    "tsibble", "feasts", "fable", "corrplot",
+    
+    # Analyse spatiale
+    "sf", "maps", "mapdata",
+    
+    # Machine Learning
+    "caret", "xgboost", "randomForest", "e1071",
+    "nnet", "ROCR", "pROC", "MLmetrics",
+    
+    # Big Data
+    "sparklyr"
+)
+
+# Installation des packages manquants
+new_packages <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages)
+
+# Chargement des packages
+invisible(lapply(required_packages, library, character.only = TRUE))
+```
+
+# Introduction {.unnumbered}
+
+Ce projet analyse la Global Terrorism Database (GTD), une base de données exhaustive couvrant plus de 180 000 attaques terroristes survenues dans le monde entre 1970 et 2017. Les données proviennent de Kaggle [@KaggleGTD].
+
+# Configuration de l'Environnement
+
+## Installation des Packages
+```{r install-packages}
+source("scripts/01_install-packages.R")
+
+# ==============================================================================
+#                    INSTALLATION DES PACKAGES R
+# ==============================================================================
+
+# Liste des packages à installer
+packages_necessaires <- c(
+  # 1. Data manipulation et visualisation de base
+  "tidyverse",     # ggplot2, dplyr, tidyr, readr, etc.
+  "scales",        # Formatage des échelles
+  "gridExtra",     # Organisation des graphiques
+  "knitr",         # Génération de rapports
+  "rmarkdown",     # Création de documents
+  
+  # 2. Visualisation géographique
+  "leaflet",       # Cartes interactives
+  "sf",            # Données géographiques
+  "maps",          # Données cartographiques
+  "mapdata",       # Données supplémentaires
+  
+  # 3. Palettes et couleurs
+  "RColorBrewer",  # Palettes de couleurs
+  "viridis",       # Palettes accessibles
+  
+  # 4. Visualisation avancée
+  "plotly",        # Graphiques interactifs
+  "treemapify",    # Création de treemaps
+  "corrplot",      # Matrices de corrélation
+  "gganimate",     # Animations
+  "animation",     # Support d'animation
+  
+  # 5. Analyse statistique et Machine Learning
+  "cluster",       # Analyse de clustering
+  "factoextra",    # Visualisation clusters
+  "caret",         # Machine Learning
+  "xgboost",       # Boosting
+  "randomForest",  # Random Forest
+  "e1071",         # SVM
+  "nnet",          # Réseaux de neurones
+  "ROCR",          # Courbes ROC
+  "pROC",          # Analyse ROC
+  "MLmetrics",     # Métriques ML
+  
+  # 6. Analyse temporelle
+  "lubridate",     # Gestion des dates
+  "tsibble",       # Séries temporelles
+  "feasts",        # Analyse de séries temporelles
+  "fable",         # Prévision de séries temporelles
+  "forecast",      # Prévisions avancées
+  "prophet",       # Prévisions Facebook
+  "zoo",           # Séries temporelles irrégulières
+  
+  # 7. Big Data
+  "sparklyr",      # Interface R pour Apache Spark
+  
+  # 8. Traitement des données
+  "janitor",       # Nettoyage des données
+  "data.table",    # Manipulation efficace
+  "DT",            # Tables interactives
+  "htmlwidgets",   # Widgets HTML
+  
+  # 9. Export et rapports
+  "openxlsx",      # Export Excel
+  "kableExtra",    # Tables améliorées
+  "bookdown",      # Documents longs
+  "flexdashboard", # Tableaux de bord
+  
+  # 10. Packages supplémentaires pour l'analyse de séries temporelles
+  "quantmod",      # Analyse financière
+  "TTR",           # Technical Trading Rules
+  "astsa"          # Applied Statistical Time Series Analysis
+)
+
+# Fonction d'installation des packages manquants
+installer_packages <- function(packages) {
+  packages_manquants <- packages[!(packages %in% installed.packages()[,"Package"])]
+  
+  if(length(packages_manquants) > 0) {
+    cat("\nInstallation des packages manquants:\n")
+    print(packages_manquants)
+    for(pkg in packages_manquants) {
+      tryCatch({
+        install.packages(pkg, dependencies = TRUE)
+        cat(sprintf("✓ Package %s installé avec succès\n", pkg))
+      }, error = function(e) {
+        cat(sprintf("⚠ Erreur lors de l'installation de %s: %s\n", pkg, e$message))
+      })
+    }
+  } else {
+    cat("\nTous les packages sont déjà installés!\n")
+  }
+}
+
+# Exécution de l'installation
+cat("=== DÉBUT DE L'INSTALLATION DES PACKAGES ===\n")
+try({
+  installer_packages(packages_necessaires)
+})
+
+# Vérification finale
+packages_installes <- packages_necessaires %in% installed.packages()[,"Package"]
+if(all(packages_installes)) {
+  cat("\n✓ Tous les packages ont été installés avec succès!\n")
+} else {
+  cat("\n⚠ Attention: Certains packages n'ont pas été installés:\n")
+  print(packages_necessaires[!packages_installes])
+}
+
+# Chargement des packages avec gestion d'erreurs améliorée
+cat("\n=== CHARGEMENT DES PACKAGES ===\n")
+invisible(lapply(packages_necessaires, function(pkg) {
+  tryCatch({
+    if(!require(pkg, character.only = TRUE)) {
+      stop(sprintf("Le package %s n'a pas pu être chargé", pkg))
+    }
+    cat(sprintf("✓ Package %s chargé avec succès\n", pkg))
+  }, error = function(e) {
+    cat(sprintf("⚠ Erreur lors du chargement de %s: %s\n", pkg, e$message))
+  }, warning = function(w) {
+    cat(sprintf("⚠ Avertissement lors du chargement de %s: %s\n", pkg, w$message))
+  })
+}))
+
+cat("\n=== INSTALLATION ET CHARGEMENT TERMINÉS ===\n")
+
+```
+
+## Configuration de Base
+```{r config-env}
+source("scripts/02_config-environnement.R")
+# ==============================================================================
+#                    CONFIGURATION DE L'ENVIRONNEMENT R
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+#                    1. CHARGEMENT DES PACKAGES
+# -----------------------------------------------------------------------------
+
+cat("=== CHARGEMENT DES PACKAGES ===\n")
+
+# 1.1 Data manipulation et visualisation
+library(tidyverse)  # Inclut ggplot2, dplyr, tidyr, readr, etc.
+library(scales)     # Formatage des échelles
+library(gridExtra)  # Organisation des graphiques
+
+# 1.2 Visualisation géographique
+library(leaflet)    # Cartes interactives
+library(sf)         # Données géographiques
+library(maps)       # Données cartographiques
+library(mapdata)    # Données supplémentaires
+
+# 1.3 Palettes et couleurs
+library(RColorBrewer)  # Palettes de couleurs
+library(viridis)       # Palettes accessibles
+
+# 1.4 Visualisation avancée
+library(plotly)      # Graphiques interactifs
+library(treemapify)  # Création de treemaps
+library(corrplot)    # Matrices de corrélation
+library(gganimate)   # Animations
+library(animation)   # Support d'animation
+
+# 1.5 Analyse statistique
+library(cluster)     # Analyse de clustering
+library(factoextra)  # Visualisation clusters
+
+# 1.6 Manipulation temporelle
+library(lubridate)   # Gestion des dates
+
+# -----------------------------------------------------------------------------
+#                    2. VÉRIFICATION DE L'ENVIRONNEMENT
+# -----------------------------------------------------------------------------
+
+cat("\n=== VÉRIFICATION DE L'ENVIRONNEMENT ===\n")
+
+# 2.1 Affichage des packages chargés
+cat("\nPackages actuellement chargés:\n")
+print(.packages())
+
+# 2.2 Vérification de la version de R
+cat("\nVersion de R:", R.version.string, "\n")
+
+# 2.3 Vérification du répertoire de travail
+cat("\nRépertoire de travail:", getwd(), "\n")
+
+# -----------------------------------------------------------------------------
+#                    3. PARAMÈTRES GÉNÉRAUX
+# -----------------------------------------------------------------------------
+
+# 3.1 Configuration des options de base
+options(
+    digits = 4,              # Nombre de décimales
+    stringsAsFactors = FALSE,# Ne pas convertir les chaînes en facteurs
+    timeout = 120,           # Timeout pour les téléchargements
+    encoding = "UTF-8"       # Encodage par défaut
+)
+
+# 3.2 Configuration de ggplot2 pour une meilleure visualisation
+theme_set(theme_minimal())  # Thème par défaut pour ggplot2
+
+cat("\n=== CONFIGURATION TERMINÉE ===\n")
+
+```
+
+## Configuration Spark
+```{r config-spark}
+source("scripts/03_config-spark.R")
+# ==============================================================================
+#                    CONFIGURATION DE SPARK
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+#                    1. CHARGEMENT DE SPARKLYR
+# -----------------------------------------------------------------------------
+
+cat("=== CONFIGURATION DE SPARK ===\n")
+
+# Chargement du package sparklyr
+library(sparklyr)
+
+# -----------------------------------------------------------------------------
+#                    2. INSTALLATION DE SPARK
+# -----------------------------------------------------------------------------
+
+# 2.1 Installation de la version spécifiée de Spark
+cat("\nInstallation de Spark...\n")
+spark_install(version = "3.5.1")
+
+# -----------------------------------------------------------------------------
+#                    3. CONFIGURATION DE SPARK
+# -----------------------------------------------------------------------------
+
+# 3.1 Fonction de configuration
+configure_spark <- function() {
+    config <- spark_config()
+    
+    # Configuration de la mémoire
+    config$`sparklyr.shell.driver-memory` <- "2G"
+    config$`sparklyr.shell.executor-memory` <- "2G"
+    
+    # Configuration additionnelle (à décommenter si nécessaire)
+    # config$spark.executor.cores <- 2
+    # config$spark.executor.instances <- 1
+    # config$spark.dynamicAllocation.enabled <- "true"
+    
+    return(config)
+}
+
+# -----------------------------------------------------------------------------
+#                    4. CONNEXION À SPARK
+# -----------------------------------------------------------------------------
+
+# 4.1 Fonction de connexion
+connect_to_spark <- function() {
+    tryCatch({
+        config <- configure_spark()
+        sc <- spark_connect(
+            master = "local",
+            version = "3.5.1",
+            config = config
+        )
+        cat("Connexion à Spark établie avec succès!\n")
+        return(sc)
+    }, error = function(e) {
+        cat("Erreur lors de la connexion à Spark:", conditionMessage(e), "\n")
+        return(NULL)
+    })
+}
+
+# -----------------------------------------------------------------------------
+#                    5. FONCTIONS UTILITAIRES
+# -----------------------------------------------------------------------------
+
+# 5.1 Fonction pour arrêter Spark
+stop_spark <- function(sc) {
+    if (!is.null(sc)) {
+        spark_disconnect(sc)
+        cat("Déconnexion de Spark effectuée.\n")
+    }
+}
+
+# 5.2 Fonction pour vérifier l'état de Spark
+check_spark_status <- function(sc) {
+    if (!is.null(sc) && spark_connection_is_open(sc)) {
+        cat("Spark est connecté et fonctionnel.\n")
+        cat("Version de Spark:", spark_version(sc), "\n")
+    } else {
+        cat("Spark n'est pas connecté.\n")
+    }
+}
+
+cat("\n=== CONFIGURATION SPARK TERMINÉE ===\n")
+cat("\nPour utiliser Spark:\n")
+cat("1. sc <- connect_to_spark()\n")
+cat("2. check_spark_status(sc)\n")
+cat("3. Pour arrêter: stop_spark(sc)\n")
+
+```
+
+# Importation et Préparation des Données
+
+## Importation
+```{r import-data}
+source("scripts/04_import-data.R")
+# ==============================================================================
+#                    IMPORTATION DES DONNÉES GTD
+# ==============================================================================
+
+library(tidyverse)
+library(sparklyr)
+library(arrow)
+
+# -----------------------------------------------------------------------------
+#                    1. CONFIGURATION
+# -----------------------------------------------------------------------------
+
+# Chemins des fichiers
+PATHS <- list(
+    RAW_DATA = "data/raw/globalterrorismdb_0718dist.csv",
+    PROCESSED_CSV = "data/processed/gtd_clean.csv",
+    PROCESSED_PARQUET = "data/processed/gtd_raw.parquet"
+)
+
+# Création des répertoires
+for(path in PATHS) {
+    dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+}
+
+# Configuration Spark
+config_spark <- function() {
+    conf <- spark_config()
+    conf$`sparklyr.shell.driver-memory` <- "4g"
+    conf$`spark.executor.memory` <- "4g"
+    return(conf)
+}
+
+# -----------------------------------------------------------------------------
+#                    2. IMPORTATION
+# -----------------------------------------------------------------------------
+
+import_gtd_data <- function(file_path, sc) {
+    tryCatch({
+        message("Importation des données GTD...")
+        
+        # Import avec Spark
+        gtd_spark <- spark_read_csv(
+            sc,
+            name = "gtd_data",
+            path = file_path,
+            header = TRUE,
+            infer_schema = TRUE,
+            options = list(encoding = "UTF-8")
+        )
+        
+        # Sélection des colonnes
+        gtd_data <- gtd_spark %>%
+            select(
+                iyear, imonth, iday,
+                country_txt, region_txt, city,
+                latitude, longitude,
+                attacktype1_txt, targtype1_txt, weaptype1_txt,
+                nkill, nwound, property, success
+            )
+        
+        message("Import réussi!")
+        return(gtd_data)
+        
+    }, error = function(e) {
+        message("Erreur d'importation : ", e$message)
+        return(NULL)
+    })
+}
+
+# -----------------------------------------------------------------------------
+#                    3. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    message("=== DÉBUT DE L'IMPORTATION ===")
+    
+    # Connexion Spark
+    conf <- config_spark()
+    sc <- spark_connect(master = "local", config = conf)
+    
+    tryCatch({
+        # Import des données
+        gtd_data <- import_gtd_data(PATHS$RAW_DATA, sc)
+        
+        if (!is.null(gtd_data)) {
+            # Sauvegarde en format parquet
+            spark_write_parquet(
+                gtd_data,
+                path = PATHS$PROCESSED_PARQUET,
+                mode = "overwrite"
+            )
+            message("Données sauvegardées avec succès!")
+        }
+        
+    }, error = function(e) {
+        message("Erreur : ", e$message)
+    }, finally = {
+        spark_disconnect(sc)
+    })
+    
+    message("=== IMPORTATION TERMINÉE ===")
+}
+
+# Exécution
+if (!interactive()) main()
+```
+
+## Nettoyage
+```{r clean-data}
+source("scripts/05_nettoyage-data.R")
+# ==============================================================================
+#                    NETTOYAGE DES DONNÉES GTD
+# ==============================================================================
+
+# Configuration de l'encodage
+Sys.setlocale(category = "LC_ALL", locale = "UTF-8")
+options(encoding = "UTF-8")
+
+# Chargement des packages
+library(tidyverse)
+library(sparklyr)
+
+# -----------------------------------------------------------------------------
+#                    1. FONCTIONS DE NETTOYAGE
+# -----------------------------------------------------------------------------
+
+clean_dates <- function(data) {
+    data %>%
+        mutate(
+            date = make_date(iyear, imonth, iday),
+            imonth = if_else(imonth %in% 1:12, imonth, NA_integer_),
+            iday = if_else(iday %in% 1:31, iday, NA_integer_)
+        )
+}
+
+clean_locations <- function(data) {
+    data %>%
+        mutate(
+            # Nettoyage sécurisé des champs texte
+            country_txt = iconv(country_txt, from = "", to = "UTF-8", sub = "") %>% str_trim(),
+            region_txt = iconv(region_txt, from = "", to = "UTF-8", sub = "") %>% str_trim(),
+            city = case_when(
+                is.na(city) ~ "Unknown",
+                city == "" ~ "Unknown",
+                TRUE ~ iconv(city, from = "", to = "UTF-8", sub = "") %>% str_trim()
+            ),
+            # Validation des coordonnées
+            latitude = if_else(between(latitude, -90, 90), latitude, NA_real_),
+            longitude = if_else(between(longitude, -180, 180), longitude, NA_real_)
+        )
+}
+
+clean_attack_info <- function(data) {
+    data %>%
+        mutate(
+            # Nettoyage des champs d'attaque
+            attacktype1_txt = iconv(attacktype1_txt, from = "", to = "UTF-8", sub = "") %>% str_trim(),
+            targtype1_txt = iconv(targtype1_txt, from = "", to = "UTF-8", sub = "") %>% str_trim(),
+            # Validation des données numériques
+            nkill = if_else(is.na(nkill) | nkill < 0, 0, nkill),
+            nwound = if_else(is.na(nwound) | nwound < 0, 0, nwound)
+        )
+}
+
+handle_missing_values <- function(data) {
+    data %>%
+        # Remplacement des valeurs manquantes numériques
+        mutate(
+            nkill = replace_na(nkill, 0),
+            nwound = replace_na(nwound, 0),
+            # Autres colonnes numériques à 0 si NA
+            across(starts_with("n") & where(is.numeric), ~replace_na(., 0))
+        ) %>%
+        # Remplacement des valeurs manquantes textuelles
+        mutate(
+            across(where(is.character), ~replace_na(., "Unknown"))
+        )
+}
+
+# -----------------------------------------------------------------------------
+#                    2. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    tryCatch({
+        message("=== DÉBUT DU NETTOYAGE DES DONNÉES ===")
+        
+        # Lecture des données
+        gtd_data <- read_csv(
+            "data/raw/globalterrorismdb_0718dist.csv",
+            locale = locale(encoding = "UTF-8")
+        )
+        
+        # Application des fonctions de nettoyage
+        gtd_clean <- gtd_data %>%
+            clean_dates() %>%
+            clean_locations() %>%
+            clean_attack_info() %>%
+            handle_missing_values()
+        
+        # Sauvegarde des données nettoyées
+        write_csv(
+            gtd_clean,
+            "data/processed/gtd_clean.csv",
+            na = ""
+        )
+        
+        message("=== NETTOYAGE TERMINÉ AVEC SUCCÈS ===")
+        
+    }, error = function(e) {
+        message("Erreur lors du nettoyage : ", e$message)
+    })
+}
+
+# Exécution du script
+if (!interactive()) main()
+```
+
+# Analyses Statistiques
+
+## Statistiques Descriptives
+```{r stats, fig.height=8}
+source("scripts/06_analyse-statistique.R")
+# ==============================================================================
+#                    ANALYSE STATISTIQUE DES DONNÉES GTD
+# ==============================================================================
+
+library(tidyverse)
+library(corrplot)
+library(tsibble)
+library(feasts)
+library(lubridate)
+library(broom)
+library(scales)
+library(fable)
+library(gridExtra)
+
+# -----------------------------------------------------------------------------
+#                    1. CHARGEMENT ET PRÉPARATION
+# -----------------------------------------------------------------------------
+
+load_gtd_data <- function() {
+    data <- read_csv("data/processed/gtd_cleaned.csv")
+    return(data)
+}
+
+# -----------------------------------------------------------------------------
+#                    2. ANALYSE EXPLORATOIRE (EDA)
+# -----------------------------------------------------------------------------
+
+analyze_distributions <- function(data) {
+    message("\n=== ANALYSE DES DISTRIBUTIONS ===")
+    
+    # Distribution des attaques par type
+    p1 <- ggplot(data, aes(x = attack_type)) +
+        geom_bar() +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        labs(title = "Distribution des types d'attaques",
+             x = "Type d'attaque", y = "Nombre d'incidents")
+    
+    # Distribution géographique
+    p2 <- ggplot(data, aes(x = region)) +
+        geom_bar() +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        labs(title = "Distribution par région",
+             x = "Région", y = "Nombre d'incidents")
+    
+    # Distribution des victimes
+    p3 <- ggplot(data, aes(x = killed)) +
+        geom_histogram(binwidth = 1) +
+        scale_x_log10(breaks = 10^(0:4)) +
+        theme_minimal() +
+        labs(title = "Distribution du nombre de victimes (échelle log)",
+             x = "Nombre de victimes", y = "Fréquence")
+    
+    grid.arrange(p1, p2, p3, ncol = 2)
+    
+    return(list(p1 = p1, p2 = p2, p3 = p3))
+}
+
+analyze_correlations <- function(data) {
+    message("\n=== ANALYSE DES CORRÉLATIONS ===")
+    
+    # Sélection des variables numériques
+    numeric_data <- data %>%
+        select(killed, wounded, latitude, longitude) %>%
+        cor(use = "complete.obs")
+    
+    # Création de la matrice de corrélation
+    corrplot(numeric_data, 
+            method = "color",
+            type = "upper",
+            addCoef.col = "black",
+            tl.col = "black",
+            tl.srt = 45)
+}
+
+# -----------------------------------------------------------------------------
+#                    3. STATISTIQUES DESCRIPTIVES
+# -----------------------------------------------------------------------------
+
+calculate_descriptive_stats <- function(data) {
+    message("\n=== STATISTIQUES DESCRIPTIVES ===")
+    
+    # Statistiques générales
+    stats_general <- data %>%
+        summarise(
+            total_incidents = n(),
+            total_killed = sum(killed, na.rm = TRUE),
+            total_wounded = sum(wounded, na.rm = TRUE),
+            mean_killed = mean(killed, na.rm = TRUE),
+            median_killed = median(killed, na.rm = TRUE),
+            sd_killed = sd(killed, na.rm = TRUE)
+        )
+    
+    # Statistiques par région
+    stats_region <- data %>%
+        group_by(region) %>%
+        summarise(
+            incidents = n(),
+            total_killed = sum(killed, na.rm = TRUE),
+            mean_killed = mean(killed, na.rm = TRUE),
+            .groups = "drop"
+        ) %>%
+        arrange(desc(incidents))
+    
+    # Statistiques par type d'attaque
+    stats_attack <- data %>%
+        group_by(attack_type) %>%
+        summarise(
+            incidents = n(),
+            total_killed = sum(killed, na.rm = TRUE),
+            mean_killed = mean(killed, na.rm = TRUE),
+            .groups = "drop"
+        ) %>%
+        arrange(desc(incidents))
+    
+    list(
+        general = stats_general,
+        by_region = stats_region,
+        by_attack = stats_attack
+    )
+}
+
+# -----------------------------------------------------------------------------
+#                    4. TESTS STATISTIQUES
+# -----------------------------------------------------------------------------
+
+perform_chi_square_tests <- function(data) {
+    message("\n=== TESTS DE CHI-CARRÉ ===")
+    
+    # Test d'indépendance entre région et type d'attaque
+    contingency_table <- table(data$region, data$attack_type)
+    chi_test <- chisq.test(contingency_table)
+    
+    # Résidus standardisés
+    residuals <- chi_test$residuals
+    
+    list(
+        test_result = chi_test,
+        residuals = residuals
+    )
+}
+
+perform_regression_analysis <- function(data) {
+    message("\n=== ANALYSE DE RÉGRESSION ===")
+    
+    # Modèle de régression pour prédire le nombre de victimes
+    model <- lm(killed ~ region + attack_type + wounded, data = data)
+    
+    # Résumé du modèle
+    model_summary <- summary(model)
+    
+    # Coefficients avec tidying
+    coef_tidy <- tidy(model)
+    
+    list(
+        model = model,
+        summary = model_summary,
+        coefficients = coef_tidy
+    )
+}
+
+# -----------------------------------------------------------------------------
+#                    5. ANALYSE TEMPORELLE
+# -----------------------------------------------------------------------------
+
+analyze_time_series <- function(data) {
+    message("\n=== ANALYSE DES SÉRIES TEMPORELLES ===")
+    
+    # Agrégation par mois
+    monthly_incidents <- data %>%
+        mutate(date = as.Date(date)) %>%
+        group_by(date = floor_date(date, "month")) %>%
+        summarise(
+            incidents = n(),
+            killed = sum(killed, na.rm = TRUE),
+            .groups = "drop"
+        )
+    
+    # Visualisation des tendances
+    p1 <- ggplot(monthly_incidents, aes(x = date, y = incidents)) +
+        geom_line() +
+        theme_minimal() +
+        labs(title = "Évolution du nombre d'incidents par mois",
+             x = "Date", y = "Nombre d'incidents")
+    
+    # Décomposition de la série temporelle
+    ts_data <- monthly_incidents %>%
+        as_tsibble(index = date) %>%
+        model(STL(incidents ~ season(window = 12)))
+    
+    components <- components(ts_data)
+    
+    # Visualisation de la décomposition
+    p2 <- autoplot(components) +
+        theme_minimal()
+    
+    list(
+        time_series = monthly_incidents,
+        decomposition = components,
+        plot_trend = p1,
+        plot_decomposition = p2
+    )
+}
+
+# -----------------------------------------------------------------------------
+#                    6. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    # Chargement des données
+    data <- load_gtd_data()
+    
+    # Analyse exploratoire
+    distribution_plots <- analyze_distributions(data)
+    analyze_correlations(data)
+    
+    # Statistiques descriptives
+    stats <- calculate_descriptive_stats(data)
+    print(stats)
+    
+    # Tests statistiques
+    chi_square_results <- perform_chi_square_tests(data)
+    print(chi_square_results$test_result)
+    
+    regression_results <- perform_regression_analysis(data)
+    print(regression_results$summary)
+    
+    # Analyse temporelle
+    time_series_results <- analyze_time_series(data)
+    print(time_series_results$decomposition)
+    
+    # Sauvegarde des résultats
+    message("\nSauvegarde des résultats...")
+    saveRDS(list(
+        stats = stats,
+        chi_square = chi_square_results,
+        regression = regression_results,
+        time_series = time_series_results
+    ), "data/processed/statistical_analysis_results.rds")
+}
+
+# Exécution si le script est lancé directement
+if (!interactive()) {
+    main()
+}
+
+```
+
+## Visualisations de Base
+```{r viz-basic, fig.height=8}
+source("scripts/07_visualisation-analysis.R")
+# ==============================================================================
+#                    VISUALISATIONS DÉTAILLÉES DES DONNÉES GTD
+# ==============================================================================
+
+library(tidyverse)
+library(corrplot)
+library(gridExtra)
+library(scales)
+library(viridis)
+library(maps)
+
+# -----------------------------------------------------------------------------
+#                    1. DISTRIBUTIONS ET TENDANCES GÉNÉRALES
+# -----------------------------------------------------------------------------
+
+plot_attack_distributions <- function(data) {
+    # Distribution par type d'attaque
+    p1 <- ggplot(data, aes(x = reorder(attack_type, attack_type, function(x) length(x)))) +
+        geom_bar(aes(fill = ..count..)) +
+        scale_fill_viridis() +
+        coord_flip() +
+        theme_minimal() +
+        labs(title = "Distribution des Types d'Attaques",
+             x = "Type d'attaque",
+             y = "Nombre d'incidents")
+    
+    # Évolution temporelle par type d'attaque
+    p2 <- data %>%
+        count(year, attack_type) %>%
+        ggplot(aes(x = year, y = n, color = attack_type)) +
+        geom_line() +
+        theme_minimal() +
+        labs(title = "Évolution des Types d'Attaques dans le Temps",
+             x = "Année",
+             y = "Nombre d'incidents",
+             color = "Type d'attaque")
+    
+    print(p1)
+    print(p2)
+}
+
+# -----------------------------------------------------------------------------
+#                    2. ANALYSE GÉOGRAPHIQUE
+# -----------------------------------------------------------------------------
+
+plot_geographical_analysis <- function(data) {
+    # Distribution par région
+    p1 <- ggplot(data, aes(x = reorder(region, region, function(x) length(x)))) +
+        geom_bar(aes(fill = ..count..)) +
+        scale_fill_viridis() +
+        coord_flip() +
+        theme_minimal() +
+        labs(title = "Nombre d'Incidents par Région",
+             x = "Région",
+             y = "Nombre d'incidents")
+    
+    # Carte des incidents
+    world <- map_data("world")
+    p2 <- ggplot() +
+        geom_map(data = world, map = world,
+                aes(long, lat, map_id = region),
+                color = "white", fill = "lightgray") +
+        geom_point(data = data,
+                  aes(x = longitude, y = latitude, color = killed),
+                  alpha = 0.5) +
+        scale_color_viridis() +
+        theme_minimal() +
+        labs(title = "Distribution Géographique des Incidents",
+             color = "Nombre de victimes")
+    
+    print(p1)
+    print(p2)
+}
+
+# -----------------------------------------------------------------------------
+#                    3. ANALYSE DES VICTIMES
+# -----------------------------------------------------------------------------
+
+plot_casualty_analysis <- function(data) {
+    # Distribution des victimes
+    p1 <- ggplot(data, aes(x = killed)) +
+        geom_histogram(bins = 50, fill = "darkred", alpha = 0.7) +
+        scale_x_log10() +
+        theme_minimal() +
+        labs(title = "Distribution du Nombre de Victimes (échelle log)",
+             x = "Nombre de victimes",
+             y = "Fréquence")
+    
+    # Victimes par région
+    p2 <- data %>%
+        group_by(region) %>%
+        summarize(total_killed = sum(killed, na.rm = TRUE)) %>%
+        ggplot(aes(x = reorder(region, total_killed), y = total_killed)) +
+        geom_col(fill = "darkred", alpha = 0.7) +
+        coord_flip() +
+        theme_minimal() +
+        labs(title = "Nombre Total de Victimes par Région",
+             x = "Région",
+             y = "Nombre total de victimes")
+    
+    print(p1)
+    print(p2)
+}
+
+# -----------------------------------------------------------------------------
+#                    4. ANALYSE DE CORRÉLATION
+# -----------------------------------------------------------------------------
+
+plot_correlation_analysis <- function(data) {
+    # Matrice de corrélation
+    numeric_data <- data %>%
+        select(killed, wounded, year) %>%
+        cor(use = "complete.obs")
+    
+    corrplot(numeric_data,
+            method = "color",
+            type = "upper",
+            addCoef.col = "black",
+            tl.col = "black",
+            tl.srt = 45,
+            title = "Matrice de Corrélation")
+    
+    # Relation entre tués et blessés
+    p <- ggplot(data, aes(x = killed, y = wounded)) +
+        geom_point(alpha = 0.5, color = "darkred") +
+        geom_smooth(method = "lm", color = "blue") +
+        scale_x_log10() +
+        scale_y_log10() +
+        theme_minimal() +
+        labs(title = "Relation entre Nombre de Tués et de Blessés",
+             x = "Nombre de tués (log)",
+             y = "Nombre de blessés (log)")
+    
+    print(p)
+}
+
+# -----------------------------------------------------------------------------
+#                    5. ANALYSE TEMPORELLE
+# -----------------------------------------------------------------------------
+
+plot_temporal_analysis <- function(data) {
+    # Tendance annuelle
+    p1 <- data %>%
+        count(year) %>%
+        ggplot(aes(x = year, y = n)) +
+        geom_line(color = "darkred") +
+        geom_smooth(method = "loess", color = "blue") +
+        theme_minimal() +
+        labs(title = "Évolution du Nombre d'Incidents par Année",
+             x = "Année",
+             y = "Nombre d'incidents")
+    
+    # Tendance mensuelle
+    p2 <- data %>%
+        group_by(year, month) %>%
+        summarise(n = n(), .groups = "drop") %>%
+        ggplot(aes(x = month, y = n, group = year, color = factor(year))) +
+        geom_line(alpha = 0.5) +
+        theme_minimal() +
+        labs(title = "Tendance Mensuelle par Année",
+             x = "Mois",
+             y = "Nombre d'incidents",
+             color = "Année")
+    
+    print(p1)
+    print(p2)
+}
+
+# -----------------------------------------------------------------------------
+#                    6. ANALYSE PAR TYPE D'ATTAQUE
+# -----------------------------------------------------------------------------
+
+plot_attack_type_analysis <- function(data) {
+    # Succès par type d'attaque
+    p1 <- data %>%
+        group_by(attack_type) %>%
+        summarise(success_rate = mean(success, na.rm = TRUE)) %>%
+        ggplot(aes(x = reorder(attack_type, success_rate), y = success_rate)) +
+        geom_col(fill = "darkblue", alpha = 0.7) +
+        coord_flip() +
+        theme_minimal() +
+        labs(title = "Taux de Succès par Type d'Attaque",
+             x = "Type d'attaque",
+             y = "Taux de succès")
+    
+    # Victimes moyennes par type d'attaque
+    p2 <- data %>%
+        group_by(attack_type) %>%
+        summarise(avg_killed = mean(killed, na.rm = TRUE)) %>%
+        ggplot(aes(x = reorder(attack_type, avg_killed), y = avg_killed)) +
+        geom_col(fill = "darkred", alpha = 0.7) +
+        coord_flip() +
+        theme_minimal() +
+        labs(title = "Nombre Moyen de Victimes par Type d'Attaque",
+             x = "Type d'attaque",
+             y = "Nombre moyen de victimes")
+    
+    print(p1)
+    print(p2)
+}
+
+# -----------------------------------------------------------------------------
+#                    7. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    # Chargement des données
+    data <- read_csv("data/processed/gtd_cleaned.csv")
+    
+    # Création des visualisations
+    message("1. Création des graphiques de distribution...")
+    plot_attack_distributions(data)
+    
+    message("2. Création des graphiques géographiques...")
+    plot_geographical_analysis(data)
+    
+    message("3. Création des graphiques de victimes...")
+    plot_casualty_analysis(data)
+    
+    message("4. Création des graphiques de corrélation...")
+    plot_correlation_analysis(data)
+    
+    message("5. Création des graphiques temporels...")
+    plot_temporal_analysis(data)
+    
+    message("6. Création des graphiques par type d'attaque...")
+    plot_attack_type_analysis(data)
+    
+    message("\nToutes les visualisations ont été générées!")
+}
+
+# Exécution si le script est lancé directement
+if (!interactive()) {
+    main()
+}
+
+```
+
+# Visualisations Avancées
+
+## Visualisations Interactives
+```{r viz-interactive}
+source("scripts/08_visualisations-interactives.R")
+# ==============================================================================
+#                    VISUALISATIONS INTERACTIVES DES DONNÉES GTD
+# ==============================================================================
+
+library(tidyverse)
+library(plotly)
+library(leaflet)
+library(viridis)
+library(DT)
+library(htmlwidgets)
+
+# -----------------------------------------------------------------------------
+#                    1. CARTE INTERACTIVE DES INCIDENTS
+# -----------------------------------------------------------------------------
+
+create_interactive_map <- function(data) {
+    message("Création de la carte interactive...")
+    
+    # Préparation des données pour la carte
+    map_data <- data %>%
+        filter(!is.na(latitude), !is.na(longitude)) %>%
+        mutate(
+            popup_text = sprintf(
+                "<strong>Pays:</strong> %s<br>
+                <strong>Ville:</strong> %s<br>
+                <strong>Date:</strong> %s<br>
+                <strong>Type d'attaque:</strong> %s<br>
+                <strong>Victimes:</strong> %d",
+                country, city, date, attack_type, killed
+            )
+        )
+
+    # Création de la carte
+    map <- leaflet(map_data) %>%
+        addTiles() %>%
+        addCircleMarkers(
+            ~longitude, ~latitude,
+            popup = ~popup_text,
+            radius = ~sqrt(killed + 1) * 3,
+            color = "red",
+            fillOpacity = 0.6,
+            clusterOptions = markerClusterOptions()
+        ) %>%
+        addLegend(
+            position = "bottomright",
+            title = "Nombre de victimes",
+            colors = c("red"),
+            labels = c("Taille proportionnelle au nombre de victimes")
+        )
+    
+    # Sauvegarde de la carte
+    saveWidget(map, "visualizations/interactive_map.html")
+    return(map)
+}
+
+# -----------------------------------------------------------------------------
+#                    2. TENDANCES TEMPORELLES INTERACTIVES
+# -----------------------------------------------------------------------------
+
+create_temporal_trends <- function(data) {
+    message("Création des tendances temporelles interactives...")
+    
+    # Tendance annuelle des incidents
+    yearly_trend <- data %>%
+        count(year) %>%
+        plot_ly(x = ~year, y = ~n, type = 'scatter', mode = 'lines+markers',
+                name = 'Incidents') %>%
+        layout(title = 'Évolution Annuelle des Incidents',
+               xaxis = list(title = 'Année'),
+               yaxis = list(title = 'Nombre d\'incidents'))
+    
+    # Distribution mensuelle par année
+    monthly_trend <- data %>%
+        count(year, month) %>%
+        plot_ly(x = ~month, y = ~n, color = ~factor(year),
+                type = 'scatter', mode = 'lines',
+                name = ~paste('Année', year)) %>%
+        layout(title = 'Distribution Mensuelle des Incidents',
+               xaxis = list(title = 'Mois'),
+               yaxis = list(title = 'Nombre d\'incidents'))
+    
+    saveWidget(yearly_trend, "visualizations/yearly_trend.html")
+    saveWidget(monthly_trend, "visualizations/monthly_trend.html")
+    
+    return(list(yearly = yearly_trend, monthly = monthly_trend))
+}
+
+# -----------------------------------------------------------------------------
+#                    3. DISTRIBUTIONS INTERACTIVES
+# -----------------------------------------------------------------------------
+
+create_interactive_distributions <- function(data) {
+    message("Création des distributions interactives...")
+    
+    # Distribution des types d'attaques
+    attack_dist <- data %>%
+        count(attack_type) %>%
+        plot_ly(x = ~reorder(attack_type, n), y = ~n,
+                type = 'bar',
+                marker = list(color = viridis(n()))) %>%
+        layout(title = 'Distribution des Types d\'Attaques',
+               xaxis = list(title = 'Type d\'attaque',
+                          categoryorder = "total descending"),
+               yaxis = list(title = 'Nombre d\'incidents'))
+    
+    # Box plot des victimes par région
+    casualties_box <- plot_ly(data, y = ~killed, color = ~region,
+                            type = "box") %>%
+        layout(title = 'Distribution des Victimes par Région',
+               xaxis = list(title = 'Région'),
+               yaxis = list(title = 'Nombre de victimes',
+                          type = 'log'))
+    
+    saveWidget(attack_dist, "visualizations/attack_distribution.html")
+    saveWidget(casualties_box, "visualizations/casualties_boxplot.html")
+    
+    return(list(attacks = attack_dist, casualties = casualties_box))
+}
+
+# -----------------------------------------------------------------------------
+#                    4. HEATMAPS INTERACTIVES
+# -----------------------------------------------------------------------------
+
+create_interactive_heatmaps <- function(data) {
+    message("Création des heatmaps interactives...")
+    
+    # Heatmap des attaques par région et type
+    attack_region_heatmap <- data %>%
+        count(region, attack_type) %>%
+        plot_ly(x = ~region, y = ~attack_type, z = ~n,
+                type = "heatmap",
+                colors = viridis(100)) %>%
+        layout(title = 'Distribution des Attaques par Région et Type',
+               xaxis = list(title = 'Région'),
+               yaxis = list(title = 'Type d\'attaque'))
+    
+    # Heatmap temporelle (année/mois)
+    temporal_heatmap <- data %>%
+        count(year, month) %>%
+        plot_ly(x = ~year, y = ~month, z = ~n,
+                type = "heatmap",
+                colors = viridis(100)) %>%
+        layout(title = 'Distribution Temporelle des Incidents',
+               xaxis = list(title = 'Année'),
+               yaxis = list(title = 'Mois'))
+    
+    saveWidget(attack_region_heatmap, "visualizations/region_type_heatmap.html")
+    saveWidget(temporal_heatmap, "visualizations/temporal_heatmap.html")
+    
+    return(list(region_type = attack_region_heatmap,
+                temporal = temporal_heatmap))
+}
+
+# -----------------------------------------------------------------------------
+#                    5. TABLEAUX INTERACTIFS
+# -----------------------------------------------------------------------------
+
+create_interactive_tables <- function(data) {
+    message("Création des tableaux interactifs...")
+    
+    # Résumé par région
+    region_summary <- data %>%
+        group_by(region) %>%
+        summarise(
+            incidents = n(),
+            total_killed = sum(killed, na.rm = TRUE),
+            avg_killed = mean(killed, na.rm = TRUE),
+            total_wounded = sum(wounded, na.rm = TRUE),
+            .groups = "drop"
+        ) %>%
+        arrange(desc(incidents))
+    
+    # Table interactive
+    table <- datatable(region_summary,
+                      options = list(pageLength = 10,
+                                   scrollX = TRUE),
+                      rownames = FALSE) %>%
+        formatRound(columns = c("avg_killed"), digits = 2)
+    
+    saveWidget(table, "visualizations/interactive_table.html")
+    return(table)
+}
+
+# -----------------------------------------------------------------------------
+#                    6. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    # Création du dossier pour les visualisations
+    dir.create("visualizations", showWarnings = FALSE)
+    
+    # Chargement des données
+    message("Chargement des données...")
+    data <- read_csv("data/processed/gtd_cleaned.csv")
+    
+    # Création des visualisations
+    map <- create_interactive_map(data)
+    trends <- create_temporal_trends(data)
+    distributions <- create_interactive_distributions(data)
+    heatmaps <- create_interactive_heatmaps(data)
+    tables <- create_interactive_tables(data)
+    
+    message("\nToutes les visualisations ont été générées dans le dossier 'visualizations'!")
+}
+
+# Exécution si le script est lancé directement
+if (!interactive()) {
+    main()
+}
+
+```
+
+## Cartes Régionales
+```{r maps-regional}
+source("scripts/09_cartes_régionales.R")
+# ==============================================================================
+#                    CARTES INTERACTIVES RÉGIONALES GTD
+# ==============================================================================
+
+library(tidyverse)
+library(leaflet)
+library(RColorBrewer)
+library(scales)
+library(sf)
+library(viridis)
+library(htmlwidgets)
+
+# -----------------------------------------------------------------------------
+#                    1. CONFIGURATION INITIALE
+# -----------------------------------------------------------------------------
+
+# Configuration des régions
+REGIONS_CONFIG <- list(
+    south_america = list(
+        name = "South America",
+        color = "#2ecc71",
+        bounds = c(-100, -60, -20, 25)
+    ),
+    north_america = list(
+        name = "North America",
+        color = "#3498db",
+        bounds = c(-170, 0, -55, 75)
+    ),
+    mena = list(
+        name = "Middle East & North Africa",
+        color = "#e74c3c",
+        bounds = c(-35, 0, 65, 60)
+    ),
+    subsaharan = list(
+        name = "Sub-Saharan Africa",
+        color = "#f1c40f",
+        bounds = c(-35, -45, 65, 60)
+    ),
+    europe = list(
+        name = c("Eastern Europe", "Western Europe"),
+        color = "#9b59b6",
+        bounds = c(-15, 10, 70, 75)
+    ),
+    asia = list(
+        name = c("South Asia", "Southeast Asia", "Central Asia", "East Asia"),
+        color = "#1abc9c",
+        bounds = c(30, -15, 165, 70)
+    )
+)
+
+# Palettes de couleurs améliorées
+COLORS <- list(
+    attack = colorRampPalette(c("#2c7bb6", "#abd9e9", "#ffffbf", "#fdae61", "#d7191c"))(5),
+    region = viridis(8, alpha = 0.8),
+    severity = c(
+        Faible = "#2ecc71",
+        Moyen = "#f1c40f",
+        Élevé = "#e74c3c"
+    )
+)
+
+# -----------------------------------------------------------------------------
+#                    2. FONCTIONS DE PRÉPARATION DES DONNÉES
+# -----------------------------------------------------------------------------
+
+prepare_data <- function(data, region_name) {
+    data %>%
+        filter(region_txt %in% region_name,
+               !is.na(longitude),
+               !is.na(latitude)) %>%
+        mutate(
+            killed_cat = cut(nkill,
+                           breaks = c(-Inf, 0, 5, 10, 25, Inf),
+                           labels = c("0", "1-5", "6-10", "11-25", ">25")),
+            year = iyear,
+            popup_text = sprintf(
+                "<div class='popup-content'>
+                    <h3>Détails de l'incident</h3>
+                    <p><b>Année:</b> %d</p>
+                    <p><b>Pays:</b> %s</p>
+                    <p><b>Ville:</b> %s</p>
+                    <p><b>Morts:</b> %d</p>
+                    <p><b>Blessés:</b> %d</p>
+                    <p><b>Type d'attaque:</b> %s</p>
+                </div>",
+                iyear, country_txt, city, nkill, nwound, attacktype1_txt
+            )
+        )
+}
+
+# -----------------------------------------------------------------------------
+#                    3. FONCTION DE CRÉATION DE CARTE RÉGIONALE
+# -----------------------------------------------------------------------------
+
+create_region_map <- function(data, region_config) {
+    region_data <- prepare_data(data, region_config$name)
+    
+    leaflet(region_data) %>%
+        # Fond de carte
+        addProviderTiles(
+            providers$CartoDB.Positron,
+            options = providerTileOptions(minZoom = 2)
+        ) %>%
+        # Ajustement des limites
+        fitBounds(
+            region_config$bounds[1],
+            region_config$bounds[2],
+            region_config$bounds[3],
+            region_config$bounds[4]
+        ) %>%
+        # Marqueurs des incidents
+        addCircleMarkers(
+            lng = ~longitude,
+            lat = ~latitude,
+            radius = ~sqrt(nkill + 1) * 3,
+            color = region_config$color,
+            fillOpacity = 0.7,
+            stroke = FALSE,
+            popup = ~popup_text,
+            clusterOptions = markerClusterOptions(
+                iconCreateFunction = JS("
+                    function(cluster) {
+                        return L.divIcon({
+                            html: '<div style=\"
+                                background-color: rgba(70, 130, 180, 0.8);
+                                width: 40px;
+                                height: 40px;
+                                border-radius: 20px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: white;
+                                font-weight: bold;
+                            \">' + cluster.getChildCount() + '</div>',
+                            className: 'marker-cluster',
+                            iconSize: L.point(40, 40)
+                        });
+                    }
+                ")
+            )
+        ) %>%
+        # Légende
+        addLegend(
+            position = "bottomright",
+            title = "Nombre de victimes",
+            colors = COLORS$attack,
+            labels = c("0", "1-5", "6-10", "11-25", ">25"),
+            opacity = 0.7
+        )
+}
+
+# -----------------------------------------------------------------------------
+#                    4. FONCTION DE CARTE MONDIALE
+# -----------------------------------------------------------------------------
+
+create_global_severity_map <- function(data) {
+    prepared_data <- data %>%
+        filter(!is.na(longitude), !is.na(latitude)) %>%
+        mutate(
+            severity = case_when(
+                nkill <= 5 ~ "Faible",
+                nkill <= 10 ~ "Moyen",
+                TRUE ~ "Élevé"
+            ),
+            severity_color = COLORS$severity[severity],
+            popup_text = sprintf(
+                "<div class='popup-content'>
+                    <h3>Détails de l'incident</h3>
+                    <p><b>Année:</b> %d</p>
+                    <p><b>Pays:</b> %s</p>
+                    <p><b>Gravité:</b> %s</p>
+                    <p><b>Morts:</b> %d</p>
+                    <p><b>Blessés:</b> %d</p>
+                    <p><b>Type d'attaque:</b> %s</p>
+                </div>",
+                iyear, country_txt, severity, nkill, nwound, attacktype1_txt
+            )
+        )
+    
+    leaflet(prepared_data) %>%
+        addProviderTiles(
+            providers$CartoDB.Positron,
+            options = providerTileOptions(minZoom = 2)
+        ) %>%
+        addCircleMarkers(
+            lng = ~longitude,
+            lat = ~latitude,
+            radius = ~sqrt(nkill + 1) * 2,
+            color = ~severity_color,
+            fillOpacity = 0.7,
+            stroke = FALSE,
+            popup = ~popup_text,
+            clusterOptions = markerClusterOptions()
+        ) %>%
+        addLegend(
+            position = "bottomright",
+            colors = unname(COLORS$severity),
+            labels = names(COLORS$severity),
+            title = "Gravité des attaques",
+            opacity = 0.7
+        )
+}
+
+# -----------------------------------------------------------------------------
+#                    5. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    # Création du dossier pour les cartes
+    dir.create("visualizations/maps", recursive = TRUE, showWarnings = FALSE)
+    
+    # Chargement des données
+    message("Chargement des données...")
+    data <- read_csv("data/processed/gtd_cleaned.csv")
+    
+    # Création des cartes régionales
+    message("Création des cartes régionales...")
+    maps <- list()
+    
+    for(region_name in names(REGIONS_CONFIG)) {
+        message(sprintf("Création de la carte pour %s...", region_name))
+        maps[[region_name]] <- create_region_map(data, REGIONS_CONFIG[[region_name]])
+        saveWidget(maps[[region_name]], 
+                  sprintf("visualizations/maps/%s_map.html", region_name))
+    }
+    
+    # Création de la carte mondiale
+    message("Création de la carte mondiale...")
+    global_map <- create_global_severity_map(data)
+    saveWidget(global_map, "visualizations/maps/global_map.html")
+    
+    message("Toutes les cartes ont été générées avec succès!")
+    return(maps)
+}
+
+# Exécution si le script est lancé directement
+if (!interactive()) {
+    main()
+}
+
+```
+
+## Animations
+```{r animations}
+source("scripts/10_visualisations_animées.R")
+# ==============================================================================
+#                    VISUALISATIONS ANIMÉES DES DONNÉES GTD
+# ==============================================================================
+
+library(tidyverse)
+library(leaflet)
+library(gganimate)
+library(maps)
+library(mapdata)
+library(animation)
+library(RColorBrewer)
+library(gridExtra)
+library(htmlwidgets)
+
+# -----------------------------------------------------------------------------
+#                    1. FONCTIONS DE BASE
+# -----------------------------------------------------------------------------
+
+create_base_map <- function() {
+    world_map <- map_data("world")
+    
+    ggplot() +
+        geom_map(
+            data = world_map,
+            map = world_map,
+            aes(long, lat, map_id = region),
+            color = "darkgrey",
+            fill = "burlywood"
+        ) +
+        coord_fixed(1.3) +
+        theme_minimal() +
+        theme(
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.title = element_blank(),
+            axis.text = element_blank()
+        )
+}
+
+prepare_data <- function(data) {
+    data %>%
+        filter(!is.na(latitude), !is.na(longitude)) %>%
+        mutate(
+            region_txt = as.factor(region_txt),
+            year = iyear,
+            month = imonth,
+            # Calcul des statistiques par région et année
+            group_by(region_txt, year) %>%
+            mutate(
+                region_mean = mean(nkill, na.rm = TRUE),
+                kill_diff = nkill - region_mean,
+                abs_kill_diff = abs(kill_diff)
+            ) %>%
+            ungroup()
+        )
+}
+
+# -----------------------------------------------------------------------------
+#                    2. CARTES STATIQUES
+# -----------------------------------------------------------------------------
+
+create_static_map <- function(data) {
+    create_base_map() +
+        geom_point(
+            data = data,
+            aes(x = longitude, y = latitude, 
+                color = region_txt, size = nkill),
+            alpha = 0.6
+        ) +
+        scale_color_brewer(palette = "Set3") +
+        scale_size_continuous(range = c(0.5, 5)) +
+        labs(
+            title = "Distribution Mondiale du Terrorisme (1970-2015)",
+            subtitle = "Taille des points proportionnelle au nombre de victimes",
+            color = "Région",
+            size = "Nombre de victimes"
+        ) +
+        theme(
+            legend.position = "bottom",
+            legend.box = "vertical",
+            legend.text = element_text(size = 8)
+        ) +
+        guides(
+            color = guide_legend(nrow = 2),
+            size = guide_legend(nrow = 1)
+        )
+}
+
+# -----------------------------------------------------------------------------
+#                    3. ANALYSES TEMPORELLES
+# -----------------------------------------------------------------------------
+
+create_temporal_analysis <- function(data) {
+    # Analyses annuelles
+    yearly_stats <- data %>%
+        group_by(year) %>%
+        summarise(
+            total_attacks = n(),
+            avg_kills = mean(nkill, na.rm = TRUE),
+            total_kills = sum(nkill, na.rm = TRUE),
+            .groups = "drop"
+        )
+    
+    # Graphique des attaques
+    p1 <- ggplot(yearly_stats, aes(x = year, y = total_attacks)) +
+        geom_line(color = "darkred", size = 1) +
+        geom_smooth(method = "loess", color = "blue", alpha = 0.2) +
+        theme_minimal() +
+        labs(
+            title = "Évolution du Nombre d'Attaques",
+            x = "Année",
+            y = "Nombre d'attaques"
+        )
+    
+    # Graphique des victimes
+    p2 <- ggplot(yearly_stats, aes(x = year)) +
+        geom_line(aes(y = avg_kills), color = "darkred", size = 1) +
+        geom_smooth(aes(y = avg_kills), method = "loess", 
+                   color = "blue", alpha = 0.2) +
+        theme_minimal() +
+        labs(
+            title = "Évolution du Nombre Moyen de Victimes",
+            x = "Année",
+            y = "Moyenne des victimes"
+        )
+    
+    list(plots = list(attacks = p1, kills = p2), data = yearly_stats)
+}
+
+# -----------------------------------------------------------------------------
+#                    4. ANIMATIONS
+# -----------------------------------------------------------------------------
+
+create_animated_map <- function(data) {
+    create_base_map() +
+        geom_point(
+            data = data,
+            aes(x = longitude, y = latitude,
+                size = abs_kill_diff,
+                color = kill_diff)
+        ) +
+        scale_color_gradient2(
+            low = "blue",
+            mid = "white",
+            high = "red",
+            midpoint = 0
+        ) +
+        scale_size_continuous(range = c(1, 8)) +
+        transition_time(year) +
+        labs(
+            title = "Évolution des Attaques Terroristes - Année: {frame_time}",
+            subtitle = "Différence par rapport à la moyenne régionale",
+            size = "Écart à la moyenne",
+            color = "Différence de victimes"
+        ) +
+        ease_aes('linear') +
+        shadow_wake(wake_length = 0.1)
+}
+
+create_animated_heatmap <- function(data) {
+    # Création d'une heatmap animée des régions au fil du temps
+    data %>%
+        group_by(year, region_txt) %>%
+        summarise(
+            attacks = n(),
+            .groups = "drop"
+        ) %>%
+        ggplot(aes(x = year, y = region_txt, fill = attacks)) +
+        geom_tile() +
+        scale_fill_viridis_c() +
+        theme_minimal() +
+        transition_time(year) +
+        labs(
+            title = "Intensité des Attaques par Région - Année: {frame_time}",
+            x = "Année",
+            y = "Région",
+            fill = "Nombre d'attaques"
+        )
+}
+
+# -----------------------------------------------------------------------------
+#                    5. VERSION INTERACTIVE
+# -----------------------------------------------------------------------------
+
+create_interactive_map <- function(data) {
+    data <- data %>%
+        mutate(
+            popup_text = sprintf(
+                "<strong>Année:</strong> %d<br/>
+                <strong>Région:</strong> %s<br/>
+                <strong>Victimes:</strong> %d<br/>
+                <strong>Différence moyenne:</strong> %.2f",
+                year, region_txt, nkill, kill_diff
+            )
+        )
+    
+    leaflet(data) %>%
+        addProviderTiles(providers$CartoDB.Positron) %>%
+        addCircleMarkers(
+            ~longitude, ~latitude,
+            popup = ~popup_text,
+            radius = ~sqrt(nkill + 1) * 2,
+            color = ~colorFactor("Set3", region_txt)(region_txt),
+            fillOpacity = 0.7,
+            stroke = FALSE,
+            clusterOptions = markerClusterOptions(
+                spiderfyOnMaxZoom = TRUE,
+                showCoverageOnHover = TRUE,
+                zoomToBoundsOnClick = TRUE,
+                maxClusterRadius = 30
+            )
+        ) %>%
+        addLegend(
+            position = "bottomright",
+            pal = colorFactor("Set3", data$region_txt),
+            values = ~region_txt,
+            title = "Régions",
+            opacity = 0.7
+        )
+}
+
+# -----------------------------------------------------------------------------
+#                    6. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    # Création des dossiers
+    dir.create("visualizations/static", recursive = TRUE, showWarnings = FALSE)
+    dir.create("visualizations/animated", recursive = TRUE, showWarnings = FALSE)
+    
+    # Chargement et préparation des données
+    message("Chargement des données...")
+    data <- read_csv("data/processed/gtd_cleaned.csv")
+    prepared_data <- prepare_data(data)
+    
+    # Création des visualisations statiques
+    message("Création des cartes statiques...")
+    static_map <- create_static_map(prepared_data)
+    ggsave("visualizations/static/global_terrorism_map.png", static_map,
+           width = 12, height = 8)
+    
+    # Analyses temporelles
+    message("Création des analyses temporelles...")
+    temporal_analysis <- create_temporal_analysis(prepared_data)
+    ggsave("visualizations/static/temporal_trends.png",
+           grid.arrange(temporal_analysis$plots$attacks,
+                       temporal_analysis$plots$kills,
+                       ncol = 2),
+           width = 15, height = 6)
+    
+    # Création des animations
+    message("Création des animations...")
+    animated_map <- create_animated_map(prepared_data)
+    animated_heatmap <- create_animated_heatmap(prepared_data)
+    
+    anim_save("visualizations/animated/terrorism_map.gif", animated_map,
+              nframes = 200, fps = 10, width = 800, height = 600)
+    anim_save("visualizations/animated/terrorism_heatmap.gif", animated_heatmap,
+              nframes = 200, fps = 10, width = 800, height = 600)
+    
+    # Création de la carte interactive
+    message("Création de la carte interactive...")
+    interactive_map <- create_interactive_map(prepared_data)
+    saveWidget(interactive_map,
+              "visualizations/animated/interactive_map.html")
+    
+    message("Toutes les visualisations ont été générées avec succès!")
+}
+
+# Exécution si le script est lancé directement
+if (!interactive()) {
+    main()
+}
+
+```
+
+# Analyses Approfondies
+
+## Analyse des Visualisations
+```{r viz-analysis}
+source("scripts/11_analyse_visualisations.R")
+# ==============================================================================
+#                    ANALYSE COMPLÈTE DES DONNÉES GTD
+# ==============================================================================
+
+library(tidyverse)
+library(leaflet)
+library(plotly)
+library(viridis)
+library(gridExtra)
+library(scales)
+library(treemapify)
+library(corrplot)
+library(gganimate)
+library(htmlwidgets)
+
+# -----------------------------------------------------------------------------
+#                    1. ANALYSE TEMPORELLE
+# -----------------------------------------------------------------------------
+
+temporal_analysis <- function(data) {
+    message("Création des analyses temporelles...")
+    
+    # Tendance annuelle
+    p1 <- ggplot(data, aes(x = year)) +
+        geom_line(stat = "count", color = "#440154FF") +
+        geom_point(stat = "count", color = "#440154FF") +
+        theme_minimal() +
+        labs(title = "Évolution du nombre d'attaques par année",
+             y = "Nombre d'attaques")
+    
+    # Distribution mensuelle
+    p2 <- ggplot(data, aes(x = factor(month))) +
+        geom_bar(fill = viridis(1)) +
+        theme_minimal() +
+        labs(title = "Distribution mensuelle des attaques",
+             x = "Mois", y = "Nombre d'attaques")
+    
+    # Box plot des victimes par année
+    p3 <- ggplot(data, aes(x = factor(year), y = killed)) +
+        geom_boxplot(fill = viridis(12)) +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 45)) +
+        labs(title = "Distribution des victimes par année")
+    
+    # Tendance animée
+    p4 <- ggplot(data, aes(x = year, y = killed)) +
+        geom_point(aes(size = wounded, color = region)) +
+        scale_color_viridis_d() +
+        theme_minimal() +
+        transition_time(year) +
+        labs(title = "Année: {frame_time}")
+    
+    list(trend = p1, monthly = p2, victims = p3, animated = p4)
+}
+
+# -----------------------------------------------------------------------------
+#                    2. ANALYSE GÉOGRAPHIQUE
+# -----------------------------------------------------------------------------
+
+geographic_analysis <- function(data) {
+    message("Création des analyses géographiques...")
+    
+    # Carte interactive
+    map1 <- leaflet(data) %>%
+        addProviderTiles(providers$CartoDB.Positron) %>%
+        addCircleMarkers(
+            lng = ~longitude,
+            lat = ~latitude,
+            radius = ~sqrt(killed + 1) * 2,
+            popup = ~paste(
+                "<strong>Pays:</strong>", country, "<br>",
+                "<strong>Type:</strong>", attack_type, "<br>",
+                "<strong>Victimes:</strong>", killed
+            ),
+            color = ~colorFactor(viridis(8), region)(region),
+            clusterOptions = markerClusterOptions()
+        ) %>%
+        addLegend(
+            position = "bottomright",
+            pal = colorFactor(viridis(8), data$region),
+            values = ~region,
+            title = "Régions"
+        )
+    
+    # Heatmap par région et type d'attaque
+    region_attack_matrix <- table(data$region, data$attack_type)
+    p1 <- corrplot(region_attack_matrix, 
+                   method = "color",
+                   type = "upper", 
+                   order = "hclust",
+                   col = viridis(100))
+    
+    # Barplot des pays les plus touchés
+    p2 <- data %>%
+        count(country) %>%
+        arrange(desc(n)) %>%
+        head(20) %>%
+        ggplot(aes(x = reorder(country, n), y = n)) +
+        geom_bar(stat = "identity", fill = viridis(1)) +
+        coord_flip() +
+        theme_minimal() +
+        labs(title = "20 pays les plus touchés",
+             x = "Pays", y = "Nombre d'attaques")
+    
+    list(map = map1, heatmap = p1, countries = p2)
+}
+
+# -----------------------------------------------------------------------------
+#                    3. ANALYSE DES TYPES D'ATTAQUES
+# -----------------------------------------------------------------------------
+
+attack_type_analysis <- function(data) {
+    message("Création des analyses par type d'attaque...")
+    
+    # Distribution des types d'attaques
+    p1 <- ggplot(data, aes(x = reorder(attack_type, attack_type, 
+                                      function(x) length(x)))) +
+        geom_bar(fill = viridis(1)) +
+        coord_flip() +
+        theme_minimal() +
+        labs(title = "Distribution des types d'attaques",
+             x = "Type d'attaque",
+             y = "Nombre d'attaques")
+    
+    # Treemap des types d'attaques
+    p2 <- data %>%
+        group_by(attack_type) %>%
+        summarise(
+            count = n(),
+            total_killed = sum(killed, na.rm = TRUE)
+        ) %>%
+        ggplot(aes(area = count, 
+                   fill = total_killed,
+                   label = paste(attack_type, "\n", count))) +
+        geom_treemap() +
+        scale_fill_viridis() +
+        labs(title = "Types d'attaques",
+             subtitle = "Taille = fréquence, couleur = victimes")
+    
+    # Évolution temporelle
+    p3 <- data %>%
+        group_by(year, attack_type) %>%
+        summarise(count = n(), .groups = "drop") %>%
+        ggplot(aes(x = year, y = count, fill = attack_type)) +
+        geom_area(position = "fill") +
+        scale_fill_viridis_d() +
+        theme_minimal() +
+        labs(title = "Évolution des types d'attaques",
+             x = "Année",
+             y = "Proportion")
+    
+    list(distribution = p1, treemap = p2, evolution = p3)
+}
+
+# -----------------------------------------------------------------------------
+#                    4. ANALYSE DES VICTIMES
+# -----------------------------------------------------------------------------
+
+casualty_analysis <- function(data) {
+    message("Création des analyses de victimes...")
+    
+    # Distribution des victimes
+    p1 <- ggplot(data, aes(x = killed)) +
+        geom_histogram(fill = viridis(1), bins = 50) +
+        scale_x_log10() +
+        theme_minimal() +
+        labs(title = "Distribution du nombre de victimes",
+             subtitle = "Échelle logarithmique",
+             x = "Nombre de victimes",
+             y = "Fréquence")
+    
+    # Relation tués/blessés
+    p2 <- ggplot(data, aes(x = killed, y = wounded)) +
+        geom_point(alpha = 0.5, color = viridis(1)) +
+        scale_x_log10() +
+        scale_y_log10() +
+        theme_minimal() +
+        labs(title = "Relation entre tués et blessés",
+             x = "Nombre de tués (log)",
+             y = "Nombre de blessés (log)")
+    
+    # Évolution temporelle
+    p3 <- data %>%
+        group_by(year) %>%
+        summarise(
+            killed = sum(killed, na.rm = TRUE),
+            wounded = sum(wounded, na.rm = TRUE),
+            .groups = "drop"
+        ) %>%
+        gather(key = "type", value = "count", -year) %>%
+        ggplot(aes(x = year, y = count, color = type)) +
+        geom_line() +
+        scale_color_viridis_d() +
+        theme_minimal() +
+        labs(title = "Évolution du nombre de victimes",
+             x = "Année",
+             y = "Nombre de victimes")
+    
+    list(distribution = p1, relationship = p2, evolution = p3)
+}
+
+# -----------------------------------------------------------------------------
+#                    5. CRÉATION DU DASHBOARD
+# -----------------------------------------------------------------------------
+
+create_dashboard <- function(plots) {
+    message("Création du dashboard interactif...")
+    
+    # Conversion des graphiques en plotly
+    trend_plotly <- ggplotly(plots$temporal$trend)
+    countries_plotly <- ggplotly(plots$geographic$countries)
+    attacks_plotly <- ggplotly(plots$attack_types$distribution)
+    casualties_plotly <- ggplotly(plots$casualties$distribution)
+    
+    # Création du dashboard
+    dashboard <- subplot(
+        trend_plotly,
+        countries_plotly,
+        attacks_plotly,
+        casualties_plotly,
+        nrows = 2
+    ) %>%
+        layout(title = "Analyse du Terrorisme Global (1970-2015)",
+               showlegend = TRUE)
+    
+    return(dashboard)
+}
+
+# -----------------------------------------------------------------------------
+#                    6. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    # Création des dossiers
+    dir.create("visualizations/dashboard", recursive = TRUE, showWarnings = FALSE)
+    
+    # Chargement des données
+    message("Chargement des données...")
+    data <- read_csv("data/processed/gtd_cleaned.csv")
+    
+    # Génération des visualisations
+    message("\nGénération des visualisations...")
+    visualizations <- list(
+        temporal = temporal_analysis(data),
+        geographic = geographic_analysis(data),
+        attack_types = attack_type_analysis(data),
+        casualties = casualty_analysis(data)
+    )
+    
+    # Création et sauvegarde du dashboard
+    message("\nCréation du dashboard...")
+    dashboard <- create_dashboard(visualizations)
+    saveWidget(dashboard, "visualizations/dashboard/terrorism_dashboard.html")
+    
+    # Sauvegarde des animations
+    message("\nSauvegarde des animations...")
+    anim_save("visualizations/dashboard/temporal_evolution.gif",
+              visualizations$temporal$animated)
+    
+    message("\nToutes les visualisations ont été générées avec succès!")
+    
+    return(list(
+        visualizations = visualizations,
+        dashboard = dashboard
+    ))
+}
+
+# Exécution si le script est lancé directement
+if (!interactive()) {
+    main()
+}
+
+```
+
+## Analyse de Clustering
+```{r clustering}
+source("scripts/12_analyse_de_clustering.R")
+# ==============================================================================
+#                    ANALYSE DE CLUSTERING DES ATTAQUES TERRORISTES
+# ==============================================================================
+
+library(tidyverse)
+library(cluster)
+library(factoextra)
+library(gridExtra)
+library(scales)
+library(viridis)
+library(plotly)
+library(htmlwidgets)
+
+# -----------------------------------------------------------------------------
+#                    1. PRÉPARATION DES DONNÉES
+# -----------------------------------------------------------------------------
+
+prepare_clustering_data <- function(data) {
+    message("Préparation des données pour le clustering...")
+    
+    # Sélection et préparation des variables
+    clustering_vars <- data %>%
+        select(
+            killed = nkill,
+            wounded = nwound,
+            latitude,
+            longitude,
+            success,
+            year
+        ) %>%
+        na.omit()
+    
+    # Standardisation des variables numériques
+    scaled_vars <- clustering_vars %>%
+        mutate(across(where(is.numeric), scale))
+    
+    return(list(
+        original = clustering_vars,
+        scaled = scaled_vars
+    ))
+}
+
+# -----------------------------------------------------------------------------
+#                    2. DÉTERMINATION DU NOMBRE OPTIMAL DE CLUSTERS
+# -----------------------------------------------------------------------------
+
+find_optimal_clusters <- function(data, max_k = 10) {
+    message("Recherche du nombre optimal de clusters...")
+    
+    # Méthode du coude
+    wss <- fviz_nbclust(data, kmeans,
+                        method = "wss",
+                        k.max = max_k) +
+        labs(title = "Méthode du Coude") +
+        theme_minimal()
+    
+    # Méthode de la silhouette
+    silhouette <- fviz_nbclust(data, kmeans,
+                              method = "silhouette",
+                              k.max = max_k) +
+        labs(title = "Méthode de la Silhouette") +
+        theme_minimal()
+    
+    # Gap statistic
+    gap <- fviz_nbclust(data, kmeans,
+                        method = "gap_stat",
+                        k.max = max_k) +
+        labs(title = "Méthode Gap") +
+        theme_minimal()
+    
+    return(list(
+        wss = wss,
+        silhouette = silhouette,
+        gap = gap
+    ))
+}
+
+# -----------------------------------------------------------------------------
+#                    3. CLUSTERING K-MEANS
+# -----------------------------------------------------------------------------
+
+perform_kmeans <- function(data, k) {
+    message(sprintf("Application du k-means avec k = %d...", k))
+    
+    set.seed(123)
+    km_result <- kmeans(data, centers = k, nstart = 25)
+    
+    return(km_result)
+}
+
+# -----------------------------------------------------------------------------
+#                    4. VISUALISATION DES CLUSTERS
+# -----------------------------------------------------------------------------
+
+create_cluster_visualizations <- function(data, km_result) {
+    message("Création des visualisations des clusters...")
+    
+    # Ajout des clusters aux données originales
+    data_clustered <- data %>%
+        mutate(cluster = as.factor(km_result$cluster))
+    
+    # Visualisation principale des clusters
+    p1 <- fviz_cluster(km_result, data = data,
+                       palette = viridis(km_result$centers %>% nrow()),
+                       ellipse.type = "convex",
+                       ggtheme = theme_minimal()) +
+        labs(title = "Visualisation des Clusters")
+    
+    # Distribution géographique interactive
+    p2 <- plot_ly(data_clustered,
+                  x = ~longitude,
+                  y = ~latitude,
+                  color = ~cluster,
+                  type = "scatter",
+                  mode = "markers",
+                  marker = list(size = 8, opacity = 0.6)) %>%
+        layout(title = "Distribution Géographique des Clusters",
+               xaxis = list(title = "Longitude"),
+               yaxis = list(title = "Latitude"))
+    
+    # Distribution temporelle
+    p3 <- ggplot(data_clustered,
+                 aes(x = year, fill = cluster)) +
+        geom_density(alpha = 0.5) +
+        scale_fill_viridis_d() +
+        theme_minimal() +
+        labs(title = "Distribution Temporelle des Clusters",
+             x = "Année",
+             y = "Densité")
+    
+    return(list(
+        cluster_viz = p1,
+        geo_dist = p2,
+        time_dist = p3
+    ))
+}
+
+# -----------------------------------------------------------------------------
+#                    5. ANALYSE DES PROFILS DE CLUSTERS
+# -----------------------------------------------------------------------------
+
+analyze_cluster_profiles <- function(data, km_result) {
+    message("Analyse des profils des clusters...")
+    
+    # Création des profils
+    cluster_profiles <- data %>%
+        mutate(cluster = km_result$cluster) %>%
+        group_by(cluster) %>%
+        summarise(
+            nombre_attaques = n(),
+            moy_tues = mean(killed, na.rm = TRUE),
+            moy_blesses = mean(wounded, na.rm = TRUE),
+            lat_moyenne = mean(latitude, na.rm = TRUE),
+            long_moyenne = mean(longitude, na.rm = TRUE),
+            taux_succes = mean(success, na.rm = TRUE)
+        )
+    
+    # Visualisation des caractéristiques
+    profile_heatmap <- cluster_profiles %>%
+        gather(key = "variable", value = "value", -cluster) %>%
+        ggplot(aes(x = cluster, y = variable, fill = value)) +
+        geom_tile() +
+        scale_fill_viridis() +
+        theme_minimal() +
+        labs(title = "Caractéristiques des Clusters",
+             x = "Cluster",
+             y = "Variable")
+    
+    # Statistiques des clusters
+    stats_plot <- cluster_profiles %>%
+        gather(key = "metric", value = "value", -cluster) %>%
+        ggplot(aes(x = as.factor(cluster), y = value)) +
+        geom_bar(stat = "identity", fill = viridis(1)) +
+        facet_wrap(~metric, scales = "free_y") +
+        theme_minimal() +
+        labs(title = "Statistiques par Cluster",
+             x = "Cluster",
+             y = "Valeur")
+    
+    return(list(
+        profiles = cluster_profiles,
+        heatmap = profile_heatmap,
+        stats = stats_plot
+    ))
+}
+
+# -----------------------------------------------------------------------------
+#                    6. VALIDATION DU CLUSTERING
+# -----------------------------------------------------------------------------
+
+validate_clustering <- function(data, km_result) {
+    message("Validation du clustering...")
+    
+    # Silhouette moyenne
+    sil <- silhouette(km_result$cluster, dist(data))
+    avg_sil <- mean(sil[,3])
+    
+    # Visualisation de la silhouette
+    sil_plot <- fviz_silhouette(sil) +
+        theme_minimal() +
+        labs(title = "Analyse de la Silhouette")
+    
+    # Variance expliquée
+    var_exp <- km_result$betweenss / km_result$totss
+    
+    # Statistiques de validation
+    validation_stats <- data.frame(
+        Metric = c("Score Silhouette Moyen", "Variance Expliquée"),
+        Value = c(avg_sil, var_exp)
+    )
+    
+    return(list(
+        silhouette = sil_plot,
+        stats = validation_stats
+    ))
+}
+
+# -----------------------------------------------------------------------------
+#                    7. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    # Création du dossier pour les résultats
+    dir.create("results/clustering", recursive = TRUE, showWarnings = FALSE)
+    
+    # Chargement des données
+    message("Chargement des données...")
+    data <- read_csv("data/processed/gtd_cleaned.csv")
+    
+    # Préparation des données
+    prep_data <- prepare_clustering_data(data)
+    
+    # Recherche du nombre optimal de clusters
+    optimal_k <- find_optimal_clusters(prep_data$scaled)
+    
+    # Sauvegarde des graphiques d'optimisation
+    ggsave("results/clustering/elbow_method.png", optimal_k$wss)
+    ggsave("results/clustering/silhouette_method.png", optimal_k$silhouette)
+    ggsave("results/clustering/gap_method.png", optimal_k$gap)
+    
+    # Application du k-means avec k optimal (ici k=5)
+    km_result <- perform_kmeans(prep_data$scaled, k = 5)
+    
+    # Création des visualisations
+    viz <- create_cluster_visualizations(prep_data$scaled, km_result)
+    
+    # Analyse des profils
+    profiles <- analyze_cluster_profiles(prep_data$original, km_result)
+    
+    # Validation
+    validation <- validate_clustering(prep_data$scaled, km_result)
+    
+    # Sauvegarde des résultats
+    saveRDS(km_result, "results/clustering/kmeans_model.rds")
+    saveRDS(profiles$profiles, "results/clustering/cluster_profiles.rds")
+    
+    # Sauvegarde des visualisations
+    ggsave("results/clustering/cluster_visualization.png", viz$cluster_viz)
+    saveWidget(viz$geo_dist, "results/clustering/geographic_distribution.html")
+    ggsave("results/clustering/temporal_distribution.png", viz$time_dist)
+    ggsave("results/clustering/profiles_heatmap.png", profiles$heatmap)
+    ggsave("results/clustering/cluster_stats.png", profiles$stats)
+    ggsave("results/clustering/silhouette_analysis.png", validation$silhouette)
+    
+    # Sauvegarde des statistiques
+    write_csv(validation$stats, "results/clustering/validation_stats.csv")
+    
+    message("Analyse de clustering terminée avec succès!")
+    
+    return(list(
+        model = km_result,
+        visualizations = viz,
+        profiles = profiles,
+        validation = validation
+    ))
+}
+
+# Exécution si le script est lancé directement
+if (!interactive()) {
+    main()
+}
+
+```
+
+## Modélisation Prédictive
+```{r predictive-models}
+source("scripts/13_predictive-models.R")
+# ==============================================================================
+#                    MODÉLISATION PRÉDICTIVE DES ATTAQUES TERRORISTES
+# ==============================================================================
+
+library(tidyverse)
+library(caret)
+library(randomForest)
+library(xgboost)
+library(ROCR)
+library(e1071)
+library(nnet)
+library(plotly)
+library(viridis)
+
+# -----------------------------------------------------------------------------
+#                    1. PRÉPARATION DES DONNÉES
+# -----------------------------------------------------------------------------
+
+prepare_data_for_modeling <- function(data) {
+    message("Préparation des données pour la modélisation...")
+    
+    # Sélection et préparation des variables
+    model_data <- data %>%
+        mutate(
+            # Variable cible : succès de l'attaque (binaire)
+            success = as.factor(success),
+            # Variables temporelles
+            month = as.factor(month),
+            weekday = as.factor(weekday),
+            # Variables catégorielles
+            region = as.factor(region),
+            country = as.factor(country),
+            attack_type = as.factor(attack_type),
+            target_type = as.factor(target_type),
+            weapon_type = as.factor(weapon_type)
+        ) %>%
+        # Sélection des variables pour le modèle
+        select(success, year, month, weekday, region, country, 
+               attack_type, target_type, weapon_type, 
+               latitude, longitude, killed, wounded)
+    
+    # Gestion des valeurs manquantes
+    model_data <- model_data %>%
+        mutate_if(is.numeric, ~replace_na(., median(., na.rm = TRUE))) %>%
+        mutate_if(is.factor, ~replace_na(., "Unknown"))
+    
+    return(model_data)
+}
+
+# -----------------------------------------------------------------------------
+#                    2. DIVISION DES DONNÉES
+# -----------------------------------------------------------------------------
+
+split_data <- function(data, train_ratio = 0.8) {
+    message("Division des données en ensembles d'entraînement et de test...")
+    
+    # Création de l'index pour la division
+    set.seed(42)
+    train_index <- createDataPartition(data$success, p = train_ratio, list = FALSE)
+    
+    # Division des données
+    train_data <- data[train_index, ]
+    test_data <- data[-train_index, ]
+    
+    return(list(train = train_data, test = test_data))
+}
+
+# -----------------------------------------------------------------------------
+#                    3. ENTRAÎNEMENT DES MODÈLES
+# -----------------------------------------------------------------------------
+
+train_models <- function(train_data, test_data) {
+    message("Entraînement des modèles...")
+    
+    # Configuration du contrôle d'entraînement
+    ctrl <- trainControl(
+        method = "cv",
+        number = 5,
+        classProbs = TRUE,
+        summaryFunction = twoClassSummary
+    )
+    
+    # 1. Régression Logistique
+    message("Entraînement du modèle de régression logistique...")
+    logistic_model <- train(
+        success ~ .,
+        data = train_data,
+        method = "glm",
+        family = "binomial",
+        trControl = ctrl,
+        metric = "ROC"
+    )
+    
+    # 2. Random Forest
+    message("Entraînement du modèle Random Forest...")
+    rf_model <- train(
+        success ~ .,
+        data = train_data,
+        method = "rf",
+        trControl = ctrl,
+        metric = "ROC",
+        ntree = 100
+    )
+    
+    # 3. XGBoost
+    message("Entraînement du modèle XGBoost...")
+    xgb_model <- train(
+        success ~ .,
+        data = train_data,
+        method = "xgbTree",
+        trControl = ctrl,
+        metric = "ROC"
+    )
+    
+    # 4. Neural Network
+    message("Entraînement du réseau de neurones...")
+    nnet_model <- train(
+        success ~ .,
+        data = train_data,
+        method = "nnet",
+        trControl = ctrl,
+        metric = "ROC",
+        trace = FALSE
+    )
+    
+    return(list(
+        logistic = logistic_model,
+        random_forest = rf_model,
+        xgboost = xgb_model,
+        neural_net = nnet_model
+    ))
+}
+
+# -----------------------------------------------------------------------------
+#                    4. ÉVALUATION DES MODÈLES
+# -----------------------------------------------------------------------------
+
+evaluate_models <- function(models, test_data) {
+    message("Évaluation des modèles...")
+    
+    # Fonction pour calculer les métriques
+    calculate_metrics <- function(model, name) {
+        # Prédictions
+        pred <- predict(model, test_data)
+        prob <- predict(model, test_data, type = "prob")
+        
+        # Matrice de confusion
+        conf_matrix <- confusionMatrix(pred, test_data$success)
+        
+        # Courbe ROC
+        pred_obj <- prediction(prob[,2], test_data$success)
+        perf_obj <- performance(pred_obj, "tpr", "fpr")
+        auc <- performance(pred_obj, "auc")@y.values[[1]]
+        
+        # Métriques
+        metrics <- data.frame(
+            Model = name,
+            Accuracy = conf_matrix$overall["Accuracy"],
+            Precision = conf_matrix$byClass["Precision"],
+            Recall = conf_matrix$byClass["Recall"],
+            F1_Score = conf_matrix$byClass["F1"],
+            AUC = auc
+        )
+        
+        return(list(
+            metrics = metrics,
+            roc_curve = list(
+                fpr = perf_obj@x.values[[1]],
+                tpr = perf_obj@y.values[[1]]
+            )
+        ))
+    }
+    
+    # Calcul des métriques pour chaque modèle
+    evaluations <- list(
+        logistic = calculate_metrics(models$logistic, "Régression Logistique"),
+        random_forest = calculate_metrics(models$random_forest, "Random Forest"),
+        xgboost = calculate_metrics(models$xgboost, "XGBoost"),
+        neural_net = calculate_metrics(models$neural_net, "Réseau de Neurones")
+    )
+    
+    return(evaluations)
+}
+
+# -----------------------------------------------------------------------------
+#                    5. VISUALISATION DES RÉSULTATS
+# -----------------------------------------------------------------------------
+
+visualize_results <- function(evaluations) {
+    message("Création des visualisations des résultats...")
+    
+    # Compilation des métriques
+    all_metrics <- bind_rows(
+        evaluations$logistic$metrics,
+        evaluations$random_forest$metrics,
+        evaluations$xgboost$metrics,
+        evaluations$neural_net$metrics
+    )
+    
+    # Graphique des métriques
+    metrics_plot <- all_metrics %>%
+        gather(key = "Metric", value = "Value", -Model) %>%
+        ggplot(aes(x = Model, y = Value, fill = Metric)) +
+        geom_bar(stat = "identity", position = "dodge") +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        scale_fill_viridis_d() +
+        labs(title = "Comparaison des Performances des Modèles",
+             y = "Valeur",
+             x = "Modèle")
+    
+    # Courbes ROC
+    roc_data <- data.frame()
+    for(model_name in names(evaluations)) {
+        roc_data <- bind_rows(
+            roc_data,
+            data.frame(
+                Model = model_name,
+                FPR = evaluations[[model_name]]$roc_curve$fpr,
+                TPR = evaluations[[model_name]]$roc_curve$tpr
+            )
+        )
+    }
+    
+    roc_plot <- ggplot(roc_data, aes(x = FPR, y = TPR, color = Model)) +
+        geom_line() +
+        geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+        theme_minimal() +
+        scale_color_viridis_d() +
+        labs(title = "Courbes ROC",
+             x = "Taux de Faux Positifs",
+             y = "Taux de Vrais Positifs")
+    
+    return(list(metrics = metrics_plot, roc = roc_plot))
+}
+
+# -----------------------------------------------------------------------------
+#                    6. IMPORTANCE DES VARIABLES
+# -----------------------------------------------------------------------------
+
+analyze_feature_importance <- function(models) {
+    message("Analyse de l'importance des variables...")
+    
+    # Importance des variables pour Random Forest
+    rf_importance <- varImp(models$random_forest)$importance
+    rf_importance$Variable <- rownames(rf_importance)
+    
+    # Visualisation
+    importance_plot <- rf_importance %>%
+        arrange(Overall) %>%
+        mutate(Variable = factor(Variable, levels = Variable)) %>%
+        ggplot(aes(x = Variable, y = Overall)) +
+        geom_bar(stat = "identity", fill = viridis(1)) +
+        coord_flip() +
+        theme_minimal() +
+        labs(title = "Importance des Variables (Random Forest)",
+             x = "Variables",
+             y = "Importance")
+    
+    return(importance_plot)
+}
+
+# -----------------------------------------------------------------------------
+#                    7. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    # Création du dossier pour les résultats
+    dir.create("results/models", recursive = TRUE, showWarnings = FALSE)
+    
+    # Chargement des données
+    message("Chargement des données...")
+    data <- read_csv("data/processed/gtd_cleaned.csv")
+    
+    # Préparation des données
+    model_data <- prepare_data_for_modeling(data)
+    
+    # Division des données
+    data_split <- split_data(model_data)
+    
+    # Entraînement des modèles
+    models <- train_models(data_split$train, data_split$test)
+    
+    # Évaluation des modèles
+    evaluations <- evaluate_models(models, data_split$test)
+    
+    # Visualisation des résultats
+    plots <- visualize_results(evaluations)
+    importance_plot <- analyze_feature_importance(models)
+    
+    # Sauvegarde des résultats
+    message("\nSauvegarde des résultats...")
+    saveRDS(models, "results/models/trained_models.rds")
+    
+    # Sauvegarde des graphiques
+    ggsave("results/models/metrics_comparison.png", plots$metrics,
+           width = 12, height = 8)
+    ggsave("results/models/roc_curves.png", plots$roc,
+           width = 10, height = 8)
+    ggsave("results/models/feature_importance.png", importance_plot,
+           width = 10, height = 8)
+    
+    message("Analyse prédictive terminée avec succès!")
+    
+    return(list(
+        models = models,
+        evaluations = evaluations,
+        plots = plots,
+        importance = importance_plot
+    ))
+}
+
+# Exécution si le script est lancé directement
+if (!interactive()) {
+    main()
+}
+
+```
+
+## Prédictions de Séries Temporelles
+```{r time-series}
+source("scripts/14_prédiction_de_série_temporelle.R")
+# ==============================================================================
+#                    PRÉDICTION DES FUTURES ATTAQUES TERRORISTES
+# ==============================================================================
+
+library(tidyverse)
+library(forecast)
+library(tsibble)
+library(prophet)
+library(zoo)
+library(plotly)
+library(viridis)
+library(lubridate)
+
+# -----------------------------------------------------------------------------
+#                    1. PRÉPARATION DES DONNÉES
+# -----------------------------------------------------------------------------
+
+prepare_time_series_data <- function(data) {
+    message("Préparation des données temporelles...")
+    
+    # Agrégation mensuelle
+    monthly_data <- data %>%
+        mutate(date = make_date(year, month, 1)) %>%
+        group_by(date) %>%
+        summarise(
+            attacks = n(),
+            casualties = sum(killed, na.rm = TRUE),
+            .groups = "drop"
+        )
+    
+    # Agrégation par région
+    regional_data <- data %>%
+        mutate(date = make_date(year, month, 1)) %>%
+        group_by(date, region) %>%
+        summarise(
+            attacks = n(),
+            casualties = sum(killed, na.rm = TRUE),
+            .groups = "drop"
+        )
+    
+    list(
+        monthly = monthly_data,
+        regional = regional_data
+    )
+}
+
+# -----------------------------------------------------------------------------
+#                    2. MODÈLES DE PRÉDICTION
+# -----------------------------------------------------------------------------
+
+# Modèle ARIMA
+train_arima_model <- function(data, horizon = 12) {
+    message("Entraînement du modèle ARIMA...")
+    
+    # Création de la série temporelle
+    ts_data <- ts(data$attacks, 
+                  frequency = 12,
+                  start = c(year(min(data$date)), month(min(data$date))))
+    
+    # Ajustement automatique du modèle ARIMA
+    model <- auto.arima(ts_data, seasonal = TRUE)
+    
+    # Prédictions
+    predictions <- forecast(model, h = horizon)
+    
+    return(list(
+        model = model,
+        predictions = predictions
+    ))
+}
+
+# Modèle Prophet
+train_prophet_model <- function(data, horizon = 12) {
+    message("Entraînement du modèle Prophet...")
+    
+    # Préparation des données pour Prophet
+    prophet_data <- data %>%
+        rename(ds = date, y = attacks)
+    
+    # Entraînement du modèle
+    model <- prophet(prophet_data, yearly.seasonality = TRUE, 
+                    weekly.seasonality = FALSE, daily.seasonality = FALSE)
+    
+    # Création du dataframe futur
+    future <- make_future_dataframe(model, periods = horizon, freq = "month")
+    
+    # Prédictions
+    predictions <- predict(model, future)
+    
+    return(list(
+        model = model,
+        predictions = predictions
+    ))
+}
+
+# Modèle par région
+train_regional_models <- function(data, horizon = 12) {
+    message("Entraînement des modèles régionaux...")
+    
+    # Création d'un modèle Prophet pour chaque région
+    regional_models <- data %>%
+        split(.$region) %>%
+        map(function(region_data) {
+            prophet_data <- region_data %>%
+                rename(ds = date, y = attacks)
+            
+            model <- prophet(prophet_data, yearly.seasonality = TRUE,
+                           weekly.seasonality = FALSE, daily.seasonality = FALSE)
+            
+            future <- make_future_dataframe(model, periods = horizon, freq = "month")
+            predictions <- predict(model, future)
+            
+            list(
+                model = model,
+                predictions = predictions
+            )
+        })
+    
+    return(regional_models)
+}
+
+# -----------------------------------------------------------------------------
+#                    3. VISUALISATION DES PRÉDICTIONS
+# -----------------------------------------------------------------------------
+
+plot_predictions <- function(data, arima_pred, prophet_pred) {
+    message("Création des visualisations des prédictions...")
+    
+    # Préparation des données de prédiction ARIMA
+    arima_df <- data.frame(
+        date = seq.Date(from = max(data$date) + months(1),
+                       by = "month", length.out = length(arima_pred$mean)),
+        prediction = as.numeric(arima_pred$mean),
+        lower = as.numeric(arima_pred$lower[,"95%"]),
+        upper = as.numeric(arima_pred$upper[,"95%"]),
+        model = "ARIMA"
+    )
+    
+    # Préparation des données de prédiction Prophet
+    prophet_df <- data.frame(
+        date = prophet_pred$ds,
+        prediction = prophet_pred$yhat,
+        lower = prophet_pred$yhat_lower,
+        upper = prophet_pred$yhat_upper,
+        model = "Prophet"
+    ) %>%
+        filter(date > max(data$date))
+    
+    # Création du graphique
+    p <- plot_ly() %>%
+        # Données historiques
+        add_lines(data = data,
+                 x = ~date, y = ~attacks,
+                 name = "Historique",
+                 line = list(color = "black")) %>%
+        # Prédictions ARIMA
+        add_lines(data = arima_df,
+                 x = ~date, y = ~prediction,
+                 name = "ARIMA",
+                 line = list(color = "blue", dash = "dash")) %>%
+        add_ribbons(data = arima_df,
+                   x = ~date, ymin = ~lower, ymax = ~upper,
+                   name = "IC ARIMA",
+                   fillcolor = "rgba(0,0,255,0.2)",
+                   line = list(color = "transparent")) %>%
+        # Prédictions Prophet
+        add_lines(data = prophet_df,
+                 x = ~date, y = ~prediction,
+                 name = "Prophet",
+                 line = list(color = "red", dash = "dash")) %>%
+        add_ribbons(data = prophet_df,
+                   x = ~date, ymin = ~lower, ymax = ~upper,
+                   name = "IC Prophet",
+                   fillcolor = "rgba(255,0,0,0.2)",
+                   line = list(color = "transparent")) %>%
+        layout(title = "Prédiction des Attaques Terroristes",
+               xaxis = list(title = "Date"),
+               yaxis = list(title = "Nombre d'attaques"))
+    
+    return(p)
+}
+
+plot_regional_predictions <- function(data, regional_models) {
+    message("Création des visualisations des prédictions régionales...")
+    
+    # Création d'un graphique pour chaque région
+    plots <- imap(regional_models, function(model, region) {
+        region_data <- data %>%
+            filter(region == !!region)
+        
+        pred_df <- model$predictions %>%
+            filter(ds > max(region_data$date))
+        
+        plot_ly() %>%
+            add_lines(data = region_data,
+                     x = ~date, y = ~attacks,
+                     name = "Historique",
+                     line = list(color = "black")) %>%
+            add_lines(data = pred_df,
+                     x = ~ds, y = ~yhat,
+                     name = "Prédiction",
+                     line = list(color = "red", dash = "dash")) %>%
+            add_ribbons(data = pred_df,
+                       x = ~ds, ymin = ~yhat_lower, ymax = ~yhat_upper,
+                       name = "Intervalle de confiance",
+                       fillcolor = "rgba(255,0,0,0.2)",
+                       line = list(color = "transparent")) %>%
+            layout(title = paste("Prédictions pour", region),
+                   xaxis = list(title = "Date"),
+                   yaxis = list(title = "Nombre d'attaques"))
+    })
+    
+    return(plots)
+}
+
+# -----------------------------------------------------------------------------
+#                    4. ÉVALUATION DES MODÈLES
+# -----------------------------------------------------------------------------
+
+evaluate_predictions <- function(data, arima_model, prophet_model) {
+    message("Évaluation des modèles de prédiction...")
+    
+    # Division des données pour validation
+    train_size <- floor(0.8 * nrow(data))
+    train_data <- data[1:train_size, ]
+    test_data <- data[(train_size+1):nrow(data), ]
+    
+    # Entraînement et prédiction sur les données de test
+    arima_test <- train_arima_model(train_data, horizon = nrow(test_data))
+    prophet_test <- train_prophet_model(train_data, horizon = nrow(test_data))
+    
+    # Calcul des métriques
+    metrics <- data.frame(
+        Model = c("ARIMA", "Prophet"),
+        RMSE = c(
+            sqrt(mean((test_data$attacks - as.numeric(arima_test$predictions$mean))^2)),
+            sqrt(mean((test_data$attacks - prophet_test$predictions$yhat[(train_size+1):nrow(data)])^2))
+        ),
+        MAE = c(
+            mean(abs(test_data$attacks - as.numeric(arima_test$predictions$mean))),
+            mean(abs(test_data$attacks - prophet_test$predictions$yhat[(train_size+1):nrow(data)]))
+        )
+    )
+    
+    return(metrics)
+}
+
+# -----------------------------------------------------------------------------
+#                    5. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+    # Création du dossier pour les résultats
+    dir.create("results/predictions", recursive = TRUE, showWarnings = FALSE)
+    
+    # Chargement des données
+    message("Chargement des données...")
+    data <- read_csv("data/processed/gtd_cleaned.csv")
+    
+    # Préparation des données
+    ts_data <- prepare_time_series_data(data)
+    
+    # Entraînement des modèles
+    arima_results <- train_arima_model(ts_data$monthly)
+    prophet_results <- train_prophet_model(ts_data$monthly)
+    regional_models <- train_regional_models(ts_data$regional)
+    
+    # Création des visualisations
+    global_pred_plot <- plot_predictions(
+        ts_data$monthly,
+        arima_results$predictions,
+        prophet_results$predictions
+    )
+    
+    regional_plots <- plot_regional_predictions(
+        ts_data$regional,
+        regional_models
+    )
+    
+    # Évaluation des modèles
+    metrics <- evaluate_predictions(
+        ts_data$monthly,
+        arima_results$model,
+        prophet_results$model
+    )
+    
+    # Sauvegarde des résultats
+    message("\nSauvegarde des résultats...")
+    saveRDS(list(
+        arima = arima_results,
+        prophet = prophet_results,
+        regional = regional_models
+    ), "results/predictions/time_series_models.rds")
+    
+    # Sauvegarde des visualisations
+    htmlwidgets::saveWidget(global_pred_plot,
+                          "results/predictions/global_predictions.html")
+    
+    for (region in names(regional_plots)) {
+        htmlwidgets::saveWidget(
+            regional_plots[[region]],
+            sprintf("results/predictions/%s_predictions.html",
+                   make.names(region))
+        )
+    }
+    
+    # Sauvegarde des métriques
+    write_csv(metrics, "results/predictions/model_metrics.csv")
+    
+    message("Prédictions terminées avec succès!")
+    
+    return(list(
+        models = list(
+            arima = arima_results,
+            prophet = prophet_results,
+            regional = regional_models
+        ),
+        plots = list(
+            global = global_pred_plot,
+            regional = regional_plots
+        ),
+        metrics = metrics
+    ))
+}
+
+# Exécution si le script est lancé directement
+if (!interactive()) {
+    main()
+}
+```
+
+# Conclusions {.unnumbered}
+
+Cette analyse approfondie de la Global Terrorism Database nous a permis de:
+
+1. Identifier les principales tendances du terrorisme mondial
+2. Créer des modèles prédictifs pour anticiper les risques
+3. Analyser les patterns géographiques et temporels
+
+# Références {.unnumbered}

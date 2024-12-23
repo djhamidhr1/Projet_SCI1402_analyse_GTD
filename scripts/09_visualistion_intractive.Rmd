@@ -1,0 +1,114 @@
+---
+title: "VISUALISATION INTERACTIVE"
+output: html_document
+date: "2024-11-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# ==========================
+# CHARGEMENT DES BIBLIOTHÈQUES NÉCESSAIRES
+# ==========================
+
+
+# Chargement des bibliothèques
+library(dplyr)
+library(plotly)
+library(RColorBrewer)
+library(htmlwidgets)
+library(readr)
+
+# ==========================
+# CHARGEMENT DES DONNÉES
+# ==========================
+cat("\n=== CHARGEMENT DES DONNÉES ===\n")
+data_path <- "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/processed/gtd_clean.csv"
+
+# Vérification du fichier
+if (file.exists(data_path)) {
+  gtd_data <- read_csv(data_path, show_col_types = FALSE)
+  cat("Données chargées avec succès !\n")
+} else {
+  stop("ERREUR : Le fichier spécifié est introuvable. Vérifiez le chemin !")
+}
+
+
+# ==========================
+# PRÉPARATION DES DONNÉES
+# ==========================
+cat("\n=== PRÉPARATION DES DONNÉES ===\n")
+
+# Préparation des données pour les types d'attaques
+attack_data <- gtd_data %>%
+  count(attacktype1_txt) %>%
+  arrange(desc(n)) %>%
+  mutate(attacktype1_txt = ifelse(row_number() > 5, "Other", attacktype1_txt)) %>%
+  group_by(attacktype1_txt) %>%
+  summarise(n = sum(n))
+
+# Préparation des données pour les types d'armes
+weapon_data <- gtd_data %>%
+  count(weaptype1_txt) %>%
+  arrange(desc(n)) %>%
+  mutate(weaptype1_txt = ifelse(row_number() > 5, "Other", weaptype1_txt)) %>%
+  group_by(weaptype1_txt) %>%
+  summarise(n = sum(n))
+
+# ==========================
+# CRÉATION DES CAMEMBERTS INTERACTIFS
+# ==========================
+
+# Camembert pour les types d'attaques
+attack_pie <- plot_ly(
+  attack_data,
+  labels = ~attacktype1_txt,
+  values = ~n,
+  type = 'pie',
+  textinfo = 'label+percent',
+  hoverinfo = 'label+value+percent',
+  marker = list(colors = RColorBrewer::brewer.pal(8, "Set2"))
+) %>%
+  layout(
+    title = list(text = "Interactive Pie Chart - Terrorist Attacks by Type"),
+    showlegend = TRUE
+  )
+
+# Camembert pour les types d'armes
+weapon_pie <- plot_ly(
+  weapon_data,
+  labels = ~weaptype1_txt,
+  values = ~n,
+  type = 'pie',
+  textinfo = 'label+percent',
+  hoverinfo = 'label+value+percent',
+  marker = list(colors = RColorBrewer::brewer.pal(8, "Set3"))
+) %>%
+  layout(
+    title = list(text = "Interactive Pie Chart - Terrorist Weapons by Type"),
+    showlegend = TRUE
+  )
+
+# ==========================
+# AFFICHAGE ET SAUVEGARDE DES GRAPHIQUES
+# ==========================
+cat("\n=== AFFICHAGE DES GRAPHIQUES ===\n")
+
+# Forcer l'affichage dans un navigateur
+options(viewer = NULL)
+
+# Affichage
+attack_pie
+weapon_pie
+
+# Sauvegarder les graphiques en HTML
+saveWidget(attack_pie, "attack_pie.html", selfcontained = TRUE)
+saveWidget(weapon_pie, "weapon_pie.html", selfcontained = TRUE)
+
+# Confirmation
+cat("Les graphiques interactifs ont été générés avec succès et sauvegardés sous 'attack_pie.html' et 'weapon_pie.html'.\n")
+
+```
+

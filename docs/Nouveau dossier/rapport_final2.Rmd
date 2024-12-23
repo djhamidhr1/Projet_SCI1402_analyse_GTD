@@ -1,0 +1,132 @@
+---
+title: |
+  | SCI 1402
+  | Projet en science des données
+  | 
+  | Analyse de la base de données mondiale sur le terrorisme
+  | Plus de 180 000 attaques terroristes dans le monde, 1970-2017
+author: |
+  | HAMID DIGORGORD
+  | No d'étudiant : 23110186
+  | 
+  | **Professeur(e)(s) responsable(s) :** 
+  | Richard Hotte
+  | 
+  | **Ressource à l'encadrement :**
+  | Fatima Bensalma
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    code_folding: show
+    theme: cosmo
+    highlight: tango
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 10,
+  fig.height = 6,
+  fig.align = 'center'
+)
+
+# Définir le répertoire de travail
+knitr::opts_knit$set(root.dir = 'C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD')
+```
+
+# Introduction
+
+Ce projet analyse la Global Terrorism Database (GTD), une base de données comprenant plus de 180 000 attaques terroristes entre 1970 et 2017. Les données proviennent de Kaggle [@KaggleGTD].
+
+# Configuration de l'Environnement
+
+## Installation des Packages
+```{r install-packages}
+source("scripts/01_install-packages.R")
+```
+
+## Configuration de l'Environnement R
+```{r config-env}
+source("scripts/02_config-environnement.R")
+```
+
+## Configuration de Spark
+```{r config-spark}
+source("scripts/03_config-spark.R")
+```
+
+# Importation et Préparation des Données
+
+## Importation des Données
+```{r import-data}
+source("scripts/04_import-data.R")
+```
+
+## Nettoyage des Données
+```{r clean-data}
+source("scripts/05_nettoyage-data.R")
+```
+
+# Analyse Exploratoire
+
+## Analyse Statistique
+```{r stat-analysis}
+source("scripts/06_analyse-statistique.R")
+```
+
+## Visualisations de Base
+```{r basic-viz}
+source("scripts/07_visualisation-analysis.R")
+```
+
+# Visualisations Avancées
+
+## Visualisations Interactives
+```{r interactive-viz}
+source("scripts/08_visualisations-interactives.R")
+```
+
+## Cartes Régionales
+```{r regional-maps}
+source("scripts/09_cartes_régionales.R")
+```
+
+## Animations
+```{r animations}
+source("scripts/10_visualisations_animées.R")
+```
+
+# Analyses Approfondies
+
+## Analyse des Visualisations
+```{r viz-analysis}
+source("scripts/11_analyse_visualisations.R")
+```
+
+## Clustering
+```{r clustering}
+source("scripts/12_analyse_de_clustering.R")
+```
+
+## Modélisation Prédictive
+```{r predictive}
+source("scripts/13_predictive-models.R")
+```
+
+## Prédictions Temporelles
+```{r time-series}
+source("scripts/14_prédiction_de_série_temporelle.R")
+```
+
+# Conclusions
+
+[Vos conclusions ici]
+
+# Références

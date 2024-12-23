@@ -1,0 +1,184 @@
+---
+title: "CARTE INTRACTIVE"
+output: html_document
+date: "2024-11-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# ================================
+# 1. CHARGEMENT DES BIBLIOTHÈQUES
+# ================================
+library(tidyverse)      # Manipulation des données
+library(lubridate)      # Manipulation des dates
+library(plotly)         # Visualisations interactives
+library(viridis)        # Palette de couleurs
+
+# =====================================
+# 2. CHARGEMENT ET PRÉPARATION DES DONNÉES
+# =====================================
+# Spécifier le chemin du fichier
+data_path <- "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/processed/gtd_clean.csv"
+
+# Charger les données
+gtd_data <- read.csv(data_path, stringsAsFactors = FALSE)
+
+# Nettoyer les données
+gtd_data$nkill <- suppressWarnings(as.numeric(gtd_data$nkill))
+gtd_data$nkill[is.na(gtd_data$nkill)] <- 0
+
+# =====================================
+# 3. PRÉPARATION DES DONNÉES DES VILLES
+# =====================================
+# Agréger les données par ville
+gtd_cities <- gtd_data %>%
+  filter(!is.na(latitude) & !is.na(longitude) & !is.na(city)) %>%
+  group_by(iyear, city, country_txt, latitude, longitude) %>%
+  summarise(
+    total_attacks = n(),
+    total_killed = sum(nkill, na.rm = TRUE)
+  ) %>%
+  rename(
+    Year = iyear,
+    City = city,
+    Country = country_txt
+  ) %>%
+  ungroup()
+
+# =========================================
+# 4. CRÉATION DES CARTES AVEC VILLES
+# =========================================
+# Palette de couleurs personnalisée
+color_scale <- list(
+  colors = c("blue", "green", "yellow", "orange", "red")
+)
+
+# Carte mondiale avec villes
+fig_world_cities <- plot_ly() %>%
+  # Fond de carte choroplèthe
+  add_trace(
+    data = gtd_world,
+    type = "choropleth",
+    locations = ~Country,
+    locationmode = "country names",
+    z = ~total_attacks,
+    frame = ~Year,
+    text = ~paste("Pays:", Country, 
+                 "<br>Total Attaques:", total_attacks, 
+                 "<br>Total Tués:", total_killed),
+    hoverinfo = "text",
+    colors = color_scale$colors,
+    showscale = TRUE
+  ) %>%
+  # Ajout des villes (points)
+  add_trace(
+    data = gtd_cities,
+    type = "scattergeo",
+    lon = ~longitude,
+    lat = ~latitude,
+    frame = ~Year,
+    mode = "markers",
+    marker = list(
+      size = ~sqrt(total_attacks) * 3,  # Taille proportionnelle aux attaques
+      color = ~total_killed,
+      colorscale = "Viridis",
+      showscale = TRUE,
+      colorbar = list(title = "Nombre de victimes")
+    ),
+    text = ~paste("Ville:", City,
+                 "<br>Pays:", Country,
+                 "<br>Attaques:", total_attacks,
+                 "<br>Victimes:", total_killed),
+    hoverinfo = "text"
+  ) %>%
+  layout(
+    title = list(
+      text = "Attaques terroristes dans le monde : Pays et Villes ciblées",
+      font = list(size = 16)
+    ),
+    geo = list(
+      showland = TRUE,
+      showocean = TRUE,
+      oceancolor = "lightblue",
+      projection = list(type = "natural earth"),
+      landcolor = "rgb(243, 243, 243)",
+      countrycolor = "rgb(204, 204, 204)"
+    ),
+    showlegend = FALSE
+  )
+
+# Fonction pour créer une carte par pays avec villes
+create_country_map <- function(country_name, scope) {
+  country_cities <- gtd_cities %>%
+    filter(Country == country_name)
+  
+  plot_ly() %>%
+    # Fond de carte du pays
+    add_trace(
+      type = "scattergeo",
+      lon = ~longitude,
+      lat = ~latitude,
+      frame = ~Year,
+      data = country_cities,
+      mode = "markers",
+      marker = list(
+        size = ~sqrt(total_attacks) * 5,
+        color = ~total_killed,
+        colorscale = "Viridis",
+        showscale = TRUE,
+        colorbar = list(title = "Nombre de victimes")
+      ),
+      text = ~paste("Ville:", City,
+                   "<br>Attaques:", total_attacks,
+                   "<br>Victimes:", total_killed),
+      hoverinfo = "text"
+    ) %>%
+    layout(
+      title = list(
+        text = paste("Attaques terroristes en", country_name, ": Villes ciblées"),
+        font = list(size = 16)
+      ),
+      geo = list(
+        scope = scope,
+        showland = TRUE,
+        landcolor = "rgb(243, 243, 243)",
+        countrycolor = "rgb(204, 204, 204)",
+        showocean = TRUE,
+        oceancolor = "lightblue",
+        showlakes = TRUE,
+        lakecolor = "lightblue"
+      ),
+      showlegend = FALSE
+    )
+}
+
+# Création des cartes spécifiques
+fig_canada_cities <- create_country_map("Canada", "north america")
+fig_france_cities <- create_country_map("France", "europe")
+
+# =========================================
+# 5. SAUVEGARDE DES VISUALISATIONS
+# =========================================
+# Créer le dossier de sortie s'il n'existe pas
+output_dir <- "visualisations"
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir)
+}
+
+# Sauvegarder les visualisations
+htmlwidgets::saveWidget(fig_world_cities, 
+                       file.path(output_dir, "carte_monde_villes.html"))
+htmlwidgets::saveWidget(fig_canada_cities, 
+                       file.path(output_dir, "carte_canada_villes.html"))
+htmlwidgets::saveWidget(fig_france_cities, 
+                       file.path(output_dir, "carte_france_villes.html"))
+
+# Message de confirmation
+cat("\nVisualisations sauvegardées dans le dossier:", output_dir, "\n")
+
+
+```
+

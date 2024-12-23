@@ -1,0 +1,208 @@
+---
+title: |
+  | ![](logo_universite.png){width=2in}
+  | 
+  | SCI 1402
+  | Projet en science des données
+  | 
+  | Analyse de la base de données mondiale sur le terrorisme
+  | Plus de 180 000 attaques terroristes dans le monde, 1970-2017
+author: |
+  | HAMID DIGORGORD
+  | No d'étudiant : 23110186
+  | 
+  | **Professeur(e)(s) responsable(s) :** 
+  | Richard Hotte
+  | 
+  | **Ressource à l'encadrement :**
+  | Fatima Bensalma
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    number_sections: true
+    fig_caption: true
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 10,
+  fig.height = 6,
+  fig.align = 'center'
+)
+
+# Installation et chargement des packages
+source("01_install-packages.R")
+source("02_config-environnement.R")
+source("03_config-spark.R")
+```
+
+# Résumé {-}
+
+Ce projet présente une analyse approfondie de la base de données mondiale sur le terrorisme (Global Terrorism Database - GTD), couvrant plus de 180 000 attaques terroristes entre 1970 et 2017. Cette étude utilise des techniques avancées d'analyse de données pour comprendre les patterns, tendances et facteurs prédictifs des incidents terroristes à l'échelle mondiale.
+
+# Introduction
+
+## Contexte
+
+La compréhension des patterns du terrorisme mondial est cruciale pour :
+- La sécurité internationale
+- L'élaboration de politiques préventives
+- La gestion des risques
+
+## Objectifs du Projet
+
+1. Analyser la distribution spatio-temporelle des attaques terroristes
+2. Identifier les patterns et tendances significatifs
+3. Développer des modèles prédictifs
+4. Formuler des recommandations basées sur les données
+
+# Méthodologie
+
+## Données et Sources
+
+```{r import-data}
+# Import et préparation des données
+source("04_import-data.R")
+source("05_nettoyage-data.R")
+```
+
+## Approche Analytique
+
+1. **Analyse exploratoire des données**
+   - Statistiques descriptives
+   - Visualisations de base
+   - Identification des patterns
+
+2. **Analyses approfondies**
+   - Analyse spatiale
+   - Analyse temporelle
+   - Clustering
+
+3. **Modélisation prédictive**
+   - Séries temporelles
+   - Modèles de classification
+   - Évaluation des performances
+
+# Analyses et Résultats
+
+## Analyse Statistique
+
+```{r statistical-analysis}
+source("06_analyse-statistique.R")
+```
+
+## Visualisations Principales
+
+```{r visualizations}
+source("07_visualisation-analysis.R")
+source("08_visualisations-interactives.R")
+```
+
+## Analyse Géographique
+
+```{r geographic-analysis}
+source("09_cartes_régionales.R")
+```
+
+## Analyse Temporelle
+
+```{r temporal-analysis}
+source("10_visualisations_animées.R")
+source("11_analyse_visualisations.R")
+```
+
+## Clustering et Patterns
+
+```{r clustering}
+source("12_analyse_de_clustering.R")
+```
+
+## Modélisation Prédictive
+
+```{r predictive-modeling}
+source("13_predictive-models.R")
+source("14_prédiction_de_série_temporelle.R")
+```
+
+# Discussion
+
+## Principales Découvertes
+
+1. **Patterns Géographiques**
+   - Identification des zones à risque
+   - Évolution des foyers d'activité
+   - Corrélations spatiales
+
+2. **Tendances Temporelles**
+   - Cycles et saisonnalité
+   - Points de rupture historiques
+   - Projections futures
+
+3. **Facteurs de Risque**
+   - Variables prédictives clés
+   - Indicateurs précoces
+   - Interactions complexes
+
+## Implications
+
+1. **Pour la Sécurité**
+   - Recommandations stratégiques
+   - Mesures préventives
+   - Systèmes d'alerte
+
+2. **Pour la Recherche**
+   - Nouvelles pistes d'investigation
+   - Améliorations méthodologiques
+   - Collections de données supplémentaires
+
+# Conclusion
+
+## Synthèse
+
+- Résumé des découvertes principales
+- Validation des objectifs
+- Impact potentiel
+
+## Recommandations
+
+1. **Opérationnelles**
+   - Systèmes de surveillance
+   - Mesures préventives
+   - Allocation des ressources
+
+2. **Stratégiques**
+   - Politiques à long terme
+   - Collaboration internationale
+   - Recherche future
+
+# Annexes
+
+## Code Source Complet
+
+Tous les scripts sont disponibles dans le répertoire du projet.
+
+## Documentation Technique
+
+### Configuration Système
+```{r system-info}
+sessionInfo()
+```
+
+### Structure des Données
+```{r data-structure}
+str(head(data))
+```
+
+## Bibliographie
+
+# Références {-}

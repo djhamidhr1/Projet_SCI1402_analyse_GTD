@@ -1,0 +1,162 @@
+# ==============================================================================
+#                    CONFIGURATION DE L'ENVIRONNEMENT R
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+#                    1. CHARGEMENT DES PACKAGES
+# -----------------------------------------------------------------------------
+
+cat("=== CHARGEMENT DES PACKAGES ===\n")
+
+# 1.1 Data manipulation et visualisation
+library(tidyverse)  # Inclut ggplot2, dplyr, tidyr, readr, etc.
+library(scales)     # Formatage des échelles
+library(gridExtra)  # Organisation des graphiques
+
+# 1.2 Visualisation géographique
+library(leaflet)    # Cartes interactives
+library(sf)         # Données géographiques
+library(maps)       # Données cartographiques
+library(mapdata)    # Données supplémentaires
+
+# 1.3 Palettes et couleurs
+library(RColorBrewer)  # Palettes de couleurs
+library(viridis)       # Palettes accessibles
+
+# 1.4 Visualisation avancée
+library(plotly)      # Graphiques interactifs
+library(treemapify)  # Création de treemaps
+library(corrplot)    # Matrices de corrélation
+library(gganimate)   # Animations
+library(animation)   # Support d'animation
+
+# 1.5 Analyse statistique
+library(cluster)     # Analyse de clustering
+library(factoextra)  # Visualisation clusters
+
+# 1.6 Manipulation temporelle
+library(lubridate)   # Gestion des dates
+
+# -----------------------------------------------------------------------------
+#                    2. VÉRIFICATION DE L'ENVIRONNEMENT
+# -----------------------------------------------------------------------------
+
+cat("\n=== VÉRIFICATION DE L'ENVIRONNEMENT ===\n")
+
+# 2.1 Affichage des packages chargés
+cat("\nPackages actuellement chargés:\n")
+print(.packages())
+
+# 2.2 Vérification de la version de R
+cat("\nVersion de R:", R.version.string, "\n")
+
+# 2.3 Vérification du répertoire de travail
+cat("\nRépertoire de travail:", getwd(), "\n")
+
+# -----------------------------------------------------------------------------
+#                    3. PARAMÈTRES GÉNÉRAUX
+# -----------------------------------------------------------------------------
+
+# 3.1 Configuration des options de base
+options(
+  digits = 4,              # Nombre de décimales
+  stringsAsFactors = FALSE,# Ne pas convertir les chaînes en facteurs
+  timeout = 120,           # Timeout pour les téléchargements
+  encoding = "UTF-8"       # Encodage par défaut
+)
+
+# 3.2 Configuration de ggplot2 pour une meilleure visualisation
+theme_set(theme_minimal())  # Thème par défaut pour ggplot2
+
+cat("\n=== CONFIGURATION TERMINÉE ===\n")
+
+# ==============================================================================
+#                    CONFIGURATION DE SPARK
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+#                    1. CHARGEMENT DE SPARKLYR
+# -----------------------------------------------------------------------------
+
+cat("=== CONFIGURATION DE SPARK ===\n")
+
+# Chargement du package sparklyr
+library(sparklyr)
+
+# -----------------------------------------------------------------------------
+#                    2. INSTALLATION DE SPARK
+# -----------------------------------------------------------------------------
+
+# 2.1 Installation de la version spécifiée de Spark
+cat("\nInstallation de Spark...\n")
+spark_install(version = "3.5.1")
+
+# -----------------------------------------------------------------------------
+#                    3. CONFIGURATION DE SPARK
+# -----------------------------------------------------------------------------
+
+# 3.1 Fonction de configuration
+configure_spark <- function() {
+  config <- spark_config()
+  
+  # Configuration de la mémoire
+  config$`sparklyr.shell.driver-memory` <- "2G"
+  config$`sparklyr.shell.executor-memory` <- "2G"
+  
+  # Configuration additionnelle (à décommenter si nécessaire)
+  # config$spark.executor.cores <- 2
+  # config$spark.executor.instances <- 1
+  # config$spark.dynamicAllocation.enabled <- "true"
+  
+  return(config)
+}
+
+# -----------------------------------------------------------------------------
+#                    4. CONNEXION À SPARK
+# -----------------------------------------------------------------------------
+
+# 4.1 Fonction de connexion
+connect_to_spark <- function() {
+  tryCatch({
+    config <- configure_spark()
+    sc <- spark_connect(
+      master = "local",
+      version = "3.5.1",
+      config = config
+    )
+    cat("Connexion à Spark établie avec succès!\n")
+    return(sc)
+  }, error = function(e) {
+    cat("Erreur lors de la connexion à Spark:", conditionMessage(e), "\n")
+    return(NULL)
+  })
+}
+
+# -----------------------------------------------------------------------------
+#                    5. FONCTIONS UTILITAIRES
+# -----------------------------------------------------------------------------
+
+# 5.1 Fonction pour arrêter Spark
+stop_spark <- function(sc) {
+  if (!is.null(sc)) {
+    spark_disconnect(sc)
+    cat("Déconnexion de Spark effectuée.\n")
+  }
+}
+
+# 5.2 Fonction pour vérifier l'état de Spark
+check_spark_status <- function(sc) {
+  if (!is.null(sc) && spark_connection_is_open(sc)) {
+    cat("Spark est connecté et fonctionnel.\n")
+    cat("Version de Spark:", spark_version(sc), "\n")
+  } else {
+    cat("Spark n'est pas connecté.\n")
+  }
+}
+
+cat("\n=== CONFIGURATION SPARK TERMINÉE ===\n")
+cat("\nPour utiliser Spark:\n")
+cat("1. sc <- connect_to_spark()\n")
+cat("2. check_spark_status(sc)\n")
+cat("3. Pour arrêter: stop_spark(sc)\n")
+

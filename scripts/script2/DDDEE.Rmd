@@ -1,0 +1,1160 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+```{r}
+# ==============================================================================
+#                    INSTALLATION DES PACKAGES R
+# ==============================================================================
+
+# Liste des packages à installer
+packages_necessaires <- c(
+  # 1. Data manipulation et visualisation de base
+  "tidyverse",     # ggplot2, dplyr, tidyr, readr, etc.
+  "scales",        # Formatage des échelles
+  "gridExtra",     # Organisation des graphiques
+  "knitr",         # Génération de rapports
+  "rmarkdown",     # Création de documents
+  
+  # 2. Visualisation géographique
+  "leaflet",       # Cartes interactives
+  "sf",            # Données géographiques
+  "maps",          # Données cartographiques
+  "mapdata",       # Données supplémentaires
+  
+  # 3. Palettes et couleurs
+  "RColorBrewer",  # Palettes de couleurs
+  "viridis",       # Palettes accessibles
+  
+  # 4. Visualisation avancée
+  "plotly",        # Graphiques interactifs
+  "treemapify",    # Création de treemaps
+  "corrplot",      # Matrices de corrélation
+  "gganimate",     # Animations
+  "animation",     # Support d'animation
+  
+  # 5. Analyse statistique et Machine Learning
+  "cluster",       # Analyse de clustering
+  "factoextra",    # Visualisation clusters
+  "caret",         # Machine Learning
+  "xgboost",       # Boosting
+  "randomForest",  # Random Forest
+  "e1071",         # SVM
+  "nnet",          # Réseaux de neurones
+  "ROCR",          # Courbes ROC
+  "pROC",          # Analyse ROC
+  "MLmetrics",     # Métriques ML
+  
+  # 6. Analyse temporelle
+  "lubridate",     # Gestion des dates
+  "tsibble",       # Séries temporelles
+  "feasts",        # Analyse de séries temporelles
+  "fable",         # Prévision de séries temporelles
+  "forecast",      # Prévisions avancées
+  "prophet",       # Prévisions Facebook
+  "zoo",           # Séries temporelles irrégulières
+  
+  # 7. Big Data
+  "sparklyr",      # Interface R pour Apache Spark
+  
+  # 8. Traitement des données
+  "janitor",       # Nettoyage des données
+  "data.table",    # Manipulation efficace
+  "DT",            # Tables interactives
+  "htmlwidgets",   # Widgets HTML
+  
+  # 9. Export et rapports
+  "openxlsx",      # Export Excel
+  "kableExtra",    # Tables améliorées
+  "bookdown",      # Documents longs
+  "flexdashboard", # Tableaux de bord
+  
+  # 10. Packages supplémentaires pour l'analyse de séries temporelles
+  "quantmod",      # Analyse financière
+  "TTR",           # Technical Trading Rules
+  "astsa"          # Applied Statistical Time Series Analysis
+)
+
+# Fonction d'installation des packages manquants
+installer_packages <- function(packages) {
+  packages_manquants <- packages[!(packages %in% installed.packages()[,"Package"])]
+  
+  if(length(packages_manquants) > 0) {
+    cat("\nInstallation des packages manquants:\n")
+    print(packages_manquants)
+    for(pkg in packages_manquants) {
+      tryCatch({
+        install.packages(pkg, dependencies = TRUE)
+        cat(sprintf("\u2713 Package %s installé avec succès\n", pkg))
+      }, error = function(e) {
+        cat(sprintf("\u26a0 Erreur lors de l'installation de %s: %s\n", pkg, e$message))
+      })
+    }
+  } else {
+    cat("\nTous les packages sont déjà installés!\n")
+  }
+}
+
+# Exécution de l'installation
+cat("=== DÉBUT DE L'INSTALLATION DES PACKAGES ===\n")
+try({
+  installer_packages(packages_necessaires)
+})
+
+# Vérification finale
+packages_installes <- packages_necessaires %in% installed.packages()[,"Package"]
+if(all(packages_installes)) {
+  cat("\n\u2713 Tous les packages ont été installés avec succès!\n")
+} else {
+  cat("\n\u26a0 Attention: Certains packages n'ont pas été installés:\n")
+  print(packages_necessaires[!packages_installes])
+}
+
+# Chargement des packages avec gestion d'erreurs améliorée
+cat("\n=== CHARGEMENT DES PACKAGES ===\n")
+invisible(lapply(packages_necessaires, function(pkg) {
+  tryCatch({
+    if(!require(pkg, character.only = TRUE)) {
+      stop(sprintf("Le package %s n'a pas pu être chargé", pkg))
+    }
+    cat(sprintf("\u2713 Package %s chargé avec succès\n", pkg))
+  }, error = function(e) {
+    cat(sprintf("\u26a0 Erreur lors du chargement de %s: %s\n", pkg, e$message))
+  }, warning = function(w) {
+    cat(sprintf("\u26a0 Avertissement lors du chargement de %s: %s\n", pkg, w$message))
+  })
+}))
+
+cat("\n=== INSTALLATION ET CHARGEMENT TERMINÉS ===\n")
+
+
+```
+
+
+
+
+
+```{r}
+# ==============================================================================
+#                    CONFIGURATION DE L'ENVIRONNEMENT R
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+#                    1. CHARGEMENT DES PACKAGES
+# -----------------------------------------------------------------------------
+
+cat("=== CHARGEMENT DES PACKAGES ===\n")
+
+# 1.1 Data manipulation et visualisation
+library(tidyverse)  # Inclut ggplot2, dplyr, tidyr, readr, etc.
+library(scales)     # Formatage des échelles
+library(gridExtra)  # Organisation des graphiques
+
+# 1.2 Visualisation géographique
+library(leaflet)    # Cartes interactives
+library(sf)         # Données géographiques
+library(maps)       # Données cartographiques
+library(mapdata)    # Données supplémentaires
+
+# 1.3 Palettes et couleurs
+library(RColorBrewer)  # Palettes de couleurs
+library(viridis)       # Palettes accessibles
+
+# 1.4 Visualisation avancée
+library(plotly)      # Graphiques interactifs
+library(treemapify)  # Création de treemaps
+library(corrplot)    # Matrices de corrélation
+library(gganimate)   # Animations
+library(animation)   # Support d'animation
+
+# 1.5 Analyse statistique
+library(cluster)     # Analyse de clustering
+library(factoextra)  # Visualisation clusters
+
+# 1.6 Manipulation temporelle
+library(lubridate)   # Gestion des dates
+
+# -----------------------------------------------------------------------------
+#                    2. VÉRIFICATION DE L'ENVIRONNEMENT
+# -----------------------------------------------------------------------------
+
+cat("\n=== VÉRIFICATION DE L'ENVIRONNEMENT ===\n")
+
+# 2.1 Affichage des packages chargés
+cat("\nPackages actuellement chargés:\n")
+print(.packages())
+
+# 2.2 Vérification de la version de R
+cat("\nVersion de R:", R.version.string, "\n")
+
+# 2.3 Vérification du répertoire de travail
+cat("\nRépertoire de travail:", getwd(), "\n")
+
+# -----------------------------------------------------------------------------
+#                    3. PARAMÈTRES GÉNÉRAUX
+# -----------------------------------------------------------------------------
+
+# 3.1 Configuration des options de base
+options(
+  digits = 4,              # Nombre de décimales
+  stringsAsFactors = FALSE,# Ne pas convertir les chaînes en facteurs
+  timeout = 120,           # Timeout pour les téléchargements
+  encoding = "UTF-8"       # Encodage par défaut
+)
+
+# 3.2 Configuration de ggplot2 pour une meilleure visualisation
+theme_set(theme_minimal())  # Thème par défaut pour ggplot2
+
+cat("\n=== CONFIGURATION TERMINÉE ===\n")
+
+# ==============================================================================
+#                    CONFIGURATION DE SPARK
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+#                    1. CHARGEMENT DE SPARKLYR
+# -----------------------------------------------------------------------------
+
+cat("=== CONFIGURATION DE SPARK ===\n")
+
+# Chargement du package sparklyr
+library(sparklyr)
+
+# -----------------------------------------------------------------------------
+#                    2. INSTALLATION DE SPARK
+# -----------------------------------------------------------------------------
+
+# 2.1 Installation de la version spécifiée de Spark
+cat("\nInstallation de Spark...\n")
+spark_install(version = "3.5.1")
+
+# -----------------------------------------------------------------------------
+#                    3. CONFIGURATION DE SPARK
+# -----------------------------------------------------------------------------
+
+# 3.1 Fonction de configuration
+configure_spark <- function() {
+  config <- spark_config()
+  
+  # Configuration de la mémoire
+  config$`sparklyr.shell.driver-memory` <- "2G"
+  config$`sparklyr.shell.executor-memory` <- "2G"
+  
+  # Configuration additionnelle (à décommenter si nécessaire)
+  # config$spark.executor.cores <- 2
+  # config$spark.executor.instances <- 1
+  # config$spark.dynamicAllocation.enabled <- "true"
+  
+  return(config)
+}
+
+# -----------------------------------------------------------------------------
+#                    4. CONNEXION À SPARK
+# -----------------------------------------------------------------------------
+
+# 4.1 Fonction de connexion
+connect_to_spark <- function() {
+  tryCatch({
+    config <- configure_spark()
+    sc <- spark_connect(
+      master = "local",
+      version = "3.5.1",
+      config = config
+    )
+    cat("Connexion à Spark établie avec succès!\n")
+    return(sc)
+  }, error = function(e) {
+    cat("Erreur lors de la connexion à Spark:", conditionMessage(e), "\n")
+    return(NULL)
+  })
+}
+
+# -----------------------------------------------------------------------------
+#                    5. FONCTIONS UTILITAIRES
+# -----------------------------------------------------------------------------
+
+# 5.1 Fonction pour arrêter Spark
+stop_spark <- function(sc) {
+  if (!is.null(sc)) {
+    spark_disconnect(sc)
+    cat("Déconnexion de Spark effectuée.\n")
+  }
+}
+
+# 5.2 Fonction pour vérifier l'état de Spark
+check_spark_status <- function(sc) {
+  if (!is.null(sc) && spark_connection_is_open(sc)) {
+    cat("Spark est connecté et fonctionnel.\n")
+    cat("Version de Spark:", spark_version(sc), "\n")
+  } else {
+    cat("Spark n'est pas connecté.\n")
+  }
+}
+
+cat("\n=== CONFIGURATION SPARK TERMINÉE ===\n")
+cat("\nPour utiliser Spark:\n")
+cat("1. sc <- connect_to_spark()\n")
+cat("2. check_spark_status(sc)\n")
+cat("3. Pour arrêter: stop_spark(sc)\n")
+
+```
+
+
+
+```{r}
+# ==============================================================================
+#                 IMPORTATION ET TRAITEMENT DES DONNÉES AVEC SPARK
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+#                1. CONFIGURATION INITIALE
+# -----------------------------------------------------------------------------
+
+# 1.1 Chargement des packages nécessaires
+library(tidyverse)  # Manipulation des données
+library(sparklyr)   # Interface avec Apache Spark
+library(arrow)      # Manipulation des fichiers Parquet
+library(readr)      # Lecture rapide des fichiers CSV
+library(ggplot2)    # Visualisation des données
+
+# 1.2 Configuration des chemins d'accès
+PATHS <- list(
+  RAW_DATA = "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/raw/globalterrorismdb_0718dist.csv",
+  PROCESSED_CSV = "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/processed/gtd_clean.csv",
+  PROCESSED_PARQUET = "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/processed/gtd_clean.parquet"
+)
+
+# 1.3 Création des répertoires nécessaires
+for (path in PATHS) {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+}
+
+# 1.4 Configuration Spark
+sc <- spark_connect(master = "local")
+
+# -----------------------------------------------------------------------------
+#                2. FONCTIONS D'IMPORTATION ET NETTOYAGE
+# -----------------------------------------------------------------------------
+
+# 2.1 Importation avec Spark
+import_with_spark <- function(file_path) {
+  message("\n--- Importation des données avec Spark ---")
+  tryCatch({
+    data <- spark_read_csv(
+      sc, 
+      name = "gtd_data", 
+      path = file_path, 
+      infer_schema = TRUE, 
+      memory = FALSE
+    ) %>%
+      select(
+        year = iyear, month = imonth, day = iday,
+        country = country_txt, region = region_txt, city,
+        latitude, longitude, attack_type = attacktype1_txt,
+        target_type = targtype1_txt, weapon_type = weaptype1_txt,
+        killed = nkill, wounded = nwound, property, success
+      ) %>%
+      mutate(
+        killed = as.numeric(killed),
+        wounded = as.numeric(wounded),
+        property = as.numeric(property)
+      )
+    message("Importation réussie avec Spark!")
+    return(data)
+  }, error = function(e) {
+    message("Erreur lors de l'importation Spark: ", e$message)
+    return(NULL)
+  })
+}
+
+# 2.2 Traitement des valeurs manquantes
+clean_data <- function(data) {
+  message("\n--- Nettoyage des valeurs manquantes ---")
+  data <- data %>%
+    mutate(
+      killed = ifelse(is.na(killed), 0, killed),
+      wounded = ifelse(is.na(wounded), 0, wounded),
+      property = ifelse(is.na(property), 0, property)
+    )
+  return(data)
+}
+
+# -----------------------------------------------------------------------------
+#                3. AFFICHAGE DES DONNÉES
+# -----------------------------------------------------------------------------
+
+afficher_donnees <- function(data) {
+  message("\n--- Aperçu des données ---")
+  data %>% head(10) %>% collect() %>% print()
+  print(summary(collect(data)))
+}
+
+# -----------------------------------------------------------------------------
+#                4. SAUVEGARDE DES DONNÉES
+# -----------------------------------------------------------------------------
+
+store_data <- function(data, output_path, format = "csv") {
+  message(sprintf("\n--- Sauvegarde des données en format %s ---", format))
+  tryCatch({
+    if (format == "parquet") {
+      spark_write_parquet(data, output_path, mode = "overwrite")
+    } else if (format == "csv") {
+      spark_write_csv(data, output_path, mode = "overwrite")
+    }
+    message("Données sauvegardées avec succès dans : ", output_path)
+  }, error = function(e) {
+    message("Erreur lors de la sauvegarde: ", e$message)
+  })
+}
+
+# -----------------------------------------------------------------------------
+#                5. VISUALISATION DES DONNÉES
+# -----------------------------------------------------------------------------
+
+visualiser_donnees <- function(data) {
+  message("\n--- Visualisation des attaques par année ---")
+  data_r <- data %>% collect()
+  ggplot(data_r, aes(x = year)) +
+    geom_bar() +
+    labs(
+      title = "Nombre d'attaques terroristes par année",
+      x = "Année",
+      y = "Nombre d'attaques"
+    ) +
+    theme_minimal()
+}
+
+# -----------------------------------------------------------------------------
+#                6. EXÉCUTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+  message("\n=== Début du traitement des données ===")
+  
+  # Importation des données
+  data <- import_with_spark(PATHS$RAW_DATA)
+  
+  if (!is.null(data)) {
+    # Nettoyage des données
+    data <- clean_data(data)
+    
+    # Affichage des données
+    afficher_donnees(data)
+    
+    # Sauvegarde des données
+    store_data(data, PATHS$PROCESSED_CSV, "csv")
+    store_data(data, PATHS$PROCESSED_PARQUET, "parquet")
+    
+    # Visualisation
+    visualiser_donnees(data)
+  } else {
+    message("Aucune donnée importée. Vérifiez le chemin d'accès.")
+  }
+  
+  message("\n=== Fin du traitement des données ===")
+}
+
+# -----------------------------------------------------------------------------
+#                7. LANCEMENT DU SCRIPT
+# -----------------------------------------------------------------------------
+
+if (!interactive()) {
+  main()
+} else {
+  message("\nExécution en mode interactif...")
+  data_test <- import_with_spark(PATHS$RAW_DATA)
+  data_test <- clean_data(data_test)
+  afficher_donnees(data_test)
+  visualiser_donnees(data_test)
+}
+
+# -----------------------------------------------------------------------------
+#                8. FERMETURE DE LA CONNEXION SPARK
+# -----------------------------------------------------------------------------
+spark_disconnect(sc)
+
+```
+
+
+
+```{r}
+# ==============================================================================
+#                 IMPORTATION, ANALYSE DES DONNÉES AVEC R SANS SPARK
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+#                1. CONFIGURATION INITIALE
+# -----------------------------------------------------------------------------
+# Chargement des packages nécessaires
+library(tidyverse)   # Manipulation et analyse des données
+library(ggplot2)     # Visualisation des données
+
+# Configuration des chemins d'accès
+file_path <- "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/raw/globalterrorismdb_0718dist.csv"
+
+# -----------------------------------------------------------------------------
+#                2. IMPORTATION ET NETTOYAGE DES DONNÉES
+# -----------------------------------------------------------------------------
+message("\n--- Importation des données ---")
+data <- read_csv(file_path)
+
+# Aperçu des données
+message("\n--- Aperçu des données : 5 premières lignes ---")
+print(head(data, 5))
+
+# Afficher les noms des colonnes
+message("\n--- Noms des colonnes ---")
+print(colnames(data))
+
+# Résumé statistique des données
+message("\n--- Résumé statistique des données ---")
+print(summary(data))
+
+# Vérification des valeurs manquantes
+message("\n--- Vérification des valeurs manquantes ---")
+print(colSums(is.na(data)))
+
+# Sélection des colonnes pertinentes pour l'analyse
+data_clean <- data %>%
+  select(
+    eventid, year = iyear, month = imonth, day = iday, 
+    country = country_txt, region = region_txt, state = provstate, 
+    city, latitude, longitude, attack_type = attacktype1_txt,
+    killed = nkill, wounded = nwound, target = targtype1_txt,
+    group = gname, success
+  )
+
+# Suppression des lignes avec des valeurs manquantes
+data_clean <- drop_na(data_clean)
+
+# Vérification après nettoyage
+message("\n--- Données après suppression des NA ---")
+print(head(data_clean, 5))
+print(colSums(is.na(data_clean)))
+
+# -----------------------------------------------------------------------------
+#                3. ANALYSE ET VISUALISATION DES DONNÉES
+# -----------------------------------------------------------------------------
+
+# 3.1 Tendance des attaques par région au fil des ans
+message("\n--- Tendance des attaques par région ---")
+attacks_by_year_region <- data_clean %>%
+  group_by(year, region) %>%
+  summarise(count = n(), .groups = "drop")
+
+ggplot(attacks_by_year_region, aes(x = year, y = count, color = region)) +
+  geom_line(size = 1) +
+  labs(
+    title = "Tendances des attaques terroristes par région (1970-2017)",
+    x = "Année",
+    y = "Nombre d'attaques",
+    color = "Région"
+  ) +
+  theme_minimal()
+
+# 3.2 Top 10 des pays les plus touchés
+message("\n--- Top 10 des pays les plus touchés ---")
+top_countries <- data_clean %>%
+  count(country, sort = TRUE) %>%
+  slice(1:10)
+
+ggplot(top_countries, aes(x = reorder(country, -n), y = n)) +
+  geom_bar(stat = "identity", fill = "tomato") +
+  labs(
+    title = "Top 10 des pays les plus touchés",
+    x = "Pays",
+    y = "Nombre d'attaques"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# 3.3 Nombre total d'attaques par région
+message("\n--- Nombre total d'attaques par région ---")
+attacks_by_region <- data_clean %>%
+  count(region, sort = TRUE)
+
+ggplot(attacks_by_region, aes(x = reorder(region, n), y = n)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Nombre total d'attaques par région",
+    x = "Région",
+    y = "Nombre d'attaques"
+  ) +
+  theme_minimal()
+
+# 3.4 Types d'attaques spécifiques par région
+message("\n--- Types d'attaques spécifiques par région ---")
+
+# Fonction pour afficher les types d'attaques pour une région spécifique
+plot_attack_types_by_region <- function(region_name) {
+  region_data <- data_clean %>%
+    filter(region == region_name) %>%
+    count(attack_type, sort = TRUE)
+  
+  ggplot(region_data, aes(x = reorder(attack_type, n), y = n)) +
+    geom_bar(stat = "identity", fill = "grey") +
+    coord_flip() +
+    labs(
+      title = paste("Types d'attaques dans la région :", region_name),
+      x = "Type d'attaque",
+      y = "Nombre d'attaques"
+    ) +
+    theme_minimal()
+}
+
+# Exemple d'appel pour la région "Middle East & North Africa"
+plot_attack_types_by_region("Middle East & North Africa")
+
+# -----------------------------------------------------------------------------
+#                4. FIN DU SCRIPT
+# -----------------------------------------------------------------------------
+message("\n=== Fin du traitement des données ===")
+
+```
+
+
+
+
+
+
+
+
+```{r}
+# ==============================================================================
+#                    NETTOYAGE DES DONNÉES GTD 
+# ==============================================================================
+
+# Configuration de l'encodage et de l'environnement
+Sys.setlocale("LC_ALL", "UTF-8")
+options(encoding = "UTF-8")
+
+# -----------------------------------------------------------------------------
+#                    1. CHARGEMENT DES PACKAGES
+# -----------------------------------------------------------------------------
+library(tidyverse)  # Manipulation de données
+library(stringi)    # Nettoyage de texte
+library(lubridate)  # Manipulation de dates
+
+# -----------------------------------------------------------------------------
+#                    2. DÉFINITION DES CHEMINS
+# -----------------------------------------------------------------------------
+PATHS <- list(
+  INPUT = "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/raw/globalterrorismdb_0718dist.csv", # Chemin absolu
+  OUTPUT = "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/processed/gtd_clean.csv",
+  TEMP = "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/temp"
+)
+
+# Création des répertoires nécessaires
+for (path in PATHS) {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+}
+
+# -----------------------------------------------------------------------------
+#                    3. FONCTIONS DE NETTOYAGE
+# -----------------------------------------------------------------------------
+
+# 3.1 Nettoyage de texte sécurisé
+safe_clean_text <- function(text) {
+  if (is.null(text) || all(is.na(text))) return(NA_character_)
+  
+  text <- as.character(text)  # Assurez-vous que c'est du texte
+  text <- tryCatch(
+    {
+      text %>%
+        stri_encode("UTF-8", "UTF-8", to_raw = TRUE) %>%  # Forcer l'encodage
+        stri_trim_both() %>%
+        str_squish()
+    },
+    warning = function(w) {
+      NA_character_  # Remplace les problèmes par NA
+    },
+    error = function(e) {
+      NA_character_  # Remplace également en cas d'erreur
+    }
+  )
+  
+  text[text == ""] <- NA_character_
+  return(text)
+}
+
+# 3.2 Nettoyage des dates
+clean_dates <- function(data) {
+  message("Nettoyage des dates...")
+  
+  data %>%
+    mutate(
+      year = iyear,
+      month = if_else(between(imonth, 1, 12), imonth, NA_integer_),
+      day = if_else(between(iday, 1, 31), iday, NA_integer_),
+      date = make_date(year, month, day)
+    )
+}
+
+# 3.3 Nettoyage des localisations
+clean_locations <- function(data) {
+  message("Nettoyage des localisations...")
+  
+  if (!"country_txt" %in% colnames(data)) {
+    stop("ERREUR : La colonne 'country_txt' est introuvable dans les données.")
+  }
+  
+  data %>%
+    mutate(
+      country = safe_clean_text(country_txt),
+      region = safe_clean_text(region_txt),
+      city = case_when(
+        city == "Unknown" ~ "Unknown",
+        TRUE ~ safe_clean_text(city)
+      ),
+      latitude = if_else(between(latitude, -90, 90), latitude, NA_real_),
+      longitude = if_else(between(longitude, -180, 180), longitude, NA_real_)
+    )
+}
+
+# 3.4 Nettoyage des informations d'attaque
+clean_attack_info <- function(data) {
+  message("Nettoyage des informations d'attaque...")
+  
+  data %>%
+    mutate(
+      attack_type = safe_clean_text(attacktype1_txt),
+      target_type = safe_clean_text(targtype1_txt),
+      weapon_type = safe_clean_text(weaptype1_txt),
+      killed = if_else(nkill < 0 | is.na(nkill), 0, nkill),
+      wounded = if_else(nwound < 0 | is.na(nwound), 0, nwound),
+      total_casualties = killed + wounded,
+      success = as.logical(success)
+    )
+}
+
+# 3.5 Gestion des valeurs manquantes
+handle_missing_values <- function(data) {
+  message("Gestion des valeurs manquantes...")
+  
+  data %>%
+    mutate(across(where(is.character), ~replace_na(., "Unknown"))) %>%
+    mutate(across(where(is.numeric), ~replace_na(., 0))) %>%
+    mutate(across(where(is.logical), ~replace_na(., FALSE)))
+}
+
+# -----------------------------------------------------------------------------
+#                    4. FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+  message("\n=== DÉBUT DU NETTOYAGE DES DONNÉES ===\n")
+  
+  tryCatch({
+    # 4.1 Lecture des données brutes
+    message("Lecture du fichier source...")
+    gtd_data <- read_csv(
+      PATHS$INPUT,
+      locale = locale(encoding = "UTF-8"),
+      show_col_types = FALSE
+    )
+    
+    # Suppression des lignes problématiques
+    if (nrow(problems(gtd_data)) > 0) {
+      message("Suppression des lignes problématiques...")
+      gtd_data <- gtd_data %>% filter(!row_number() %in% problems(gtd_data)$row)
+    }
+    
+    # 4.2 Vérification des colonnes disponibles
+    message("\nColonnes disponibles dans les données :")
+    print(colnames(gtd_data))
+    
+    message("\nAperçu des premières lignes des données :")
+    print(head(gtd_data))
+    
+    # 4.3 Application des étapes de nettoyage
+    gtd_clean <- gtd_data %>%
+      clean_dates() %>%
+      clean_locations() %>%
+      clean_attack_info() %>%
+      handle_missing_values()
+    
+    # 4.4 Sauvegarde des données nettoyées
+    message("Sauvegarde des données nettoyées...")
+    write_csv(gtd_clean, PATHS$OUTPUT)
+    
+    # 4.5 Affichage des statistiques finales
+    message("\nStatistiques finales :")
+    summary_stats <- gtd_clean %>%
+      summarise(
+        total_incidents = n(),
+        total_countries = n_distinct(country),
+        period = paste(min(year, na.rm = TRUE), "-", max(year, na.rm = TRUE)),
+        total_killed = sum(killed, na.rm = TRUE),
+        total_wounded = sum(wounded, na.rm = TRUE)
+      )
+    print(summary_stats)
+    
+    message("\n=== NETTOYAGE TERMINÉ AVEC SUCCÈS ===")
+    
+  }, error = function(e) {
+    message("\nERREUR : ", e$message)
+  })
+}
+
+# -----------------------------------------------------------------------------
+#                    5. EXÉCUTION DU SCRIPT
+# -----------------------------------------------------------------------------
+
+if (!interactive()) {
+  main()
+} else {
+  message("Exécution interactive...")
+  main()
+}
+
+```
+
+
+
+```{r}
+# ==============================================================================
+#                    ANALYSE EXPLORATOIRE DES DONNÉES GTD AMÉLIORÉE
+# ==============================================================================
+
+# Installation et chargement des packages
+install_missing_packages <- function(pkgs) {
+  to_install <- pkgs[!(pkgs %in% installed.packages()[, "Package"])]
+  if (length(to_install)) {
+    install.packages(to_install)
+  }
+}
+
+required_packages <- c("tidyverse", "lubridate", "ggplot2", "scales", "here", "plotly", "DT")
+install_missing_packages(required_packages)
+invisible(lapply(required_packages, library, character.only = TRUE))
+
+# Chemins d'accès
+PATHS <- list(
+  INPUT = here("data", "processed", "gtd_clean.csv"),
+  OUTPUT = here("outputs", "figures")
+)
+
+# Vérification du fichier
+if (!file.exists(PATHS$INPUT)) stop("Erreur : Le fichier gtd_clean.csv est introuvable.")
+
+dir.create(PATHS$OUTPUT, recursive = TRUE, showWarnings = FALSE)
+
+# -----------------------------------------------------------------------------
+#                    CHARGEMENT ET PRÉPARATION DES DONNÉES
+# -----------------------------------------------------------------------------
+gtd_data <- read_csv(PATHS$INPUT, locale = locale(encoding = "ISO-8859-1"), show_col_types = FALSE) %>%
+  mutate(
+    across(where(is.character), ~ enc2utf8(.)),
+    total_casualties = replace_na(killed, 0) + replace_na(wounded, 0),
+    year = as.integer(year)
+  ) %>%
+  filter(!is.na(year) & year >= 1970 & year <= 2017)
+
+# -----------------------------------------------------------------------------
+#                    STATISTIQUES ET VISUALISATIONS
+# -----------------------------------------------------------------------------
+# Statistiques descriptives
+cat("\n=== STATISTIQUES DESCRIPTIVES ===\n")
+print(summary(gtd_data))
+
+# Tableaux interactifs
+datatable(head(gtd_data, 100), caption = "Aperçu des 100 premières lignes")
+
+# Graphiques
+current_time <- format(Sys.time(), "%Y-%m-%d_%H-%M-%S")
+
+# 1. Distribution des types d'attaques
+distribution_attacks <- ggplot(gtd_data, aes(x = fct_infreq(attack_type))) +
+  geom_bar(fill = "skyblue") +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "Distribution des types d'attaques", x = "Type d'attaque", y = "Nombre d'incidents")
+
+ggsave(file.path(PATHS$OUTPUT, paste0("distribution_attacks_", current_time, ".png")), distribution_attacks)
+
+# 2. Évolution annuelle
+evolution_annual <- gtd_data %>%
+  group_by(year) %>%
+  summarise(total_incidents = n()) %>%
+  ggplot(aes(x = year, y = total_incidents)) +
+  geom_line(color = "red", size = 1) +
+  theme_minimal() +
+  labs(title = "Évolution annuelle des incidents", x = "Année", y = "Nombre d'incidents")
+
+ggsave(file.path(PATHS$OUTPUT, paste0("evolution_annual_", current_time, ".png")), evolution_annual)
+
+# 3. Carte géographique (optionnelle)
+if ("latitude" %in% colnames(gtd_data) & "longitude" %in% colnames(gtd_data)) {
+  map_plot <- gtd_data %>%
+    filter(!is.na(latitude) & !is.na(longitude)) %>%
+    sample_n(5000) %>%
+    ggplot(aes(x = longitude, y = latitude)) +
+    geom_point(alpha = 0.5, color = "blue") +
+    theme_minimal() +
+    labs(title = "Répartition géographique des incidents", x = "Longitude", y = "Latitude")
+  
+  ggsave(file.path(PATHS$OUTPUT, paste0("geographic_distribution_", current_time, ".png")), map_plot)
+}
+
+# -----------------------------------------------------------------------------
+#                    RÉCAPITULATIF
+# -----------------------------------------------------------------------------
+cat("\n=== RÉCAPITULATIF DE L'ANALYSE ===\n")
+cat("Nombre total d'incidents analysés :", nrow(gtd_data), "\n")
+cat("Période couverte : de", min(gtd_data$year), "à", max(gtd_data$year), "\n")
+cat("=== ANALYSE EXPLORATOIRE TERMINÉE ===\n")
+
+```
+
+
+
+
+
+
+```{r}
+# ==============================================================================
+#                    VISUALISATIONS DÉTAILLÉES DES DONNÉES GTD
+# ==============================================================================
+
+library(tidyverse)
+library(corrplot)
+library(gridExtra)
+library(scales)
+library(viridis)
+library(maps)
+
+# -----------------------------------------------------------------------------
+#                    1. DISTRIBUTIONS ET TENDANCES GÉNÉRALES
+# -----------------------------------------------------------------------------
+
+plot_attack_distributions <- function(data) 
+  # Distribution par type d'attaque
+  p1 <- ggplot(data, aes(x = reorder(attack_type, attack_type, function(x) length(x)))) +
+    geom_bar(aes(fill = ..count..)) +
+    scale_fill_viridis() +
+    coord_flip() +
+    theme_minimal() +
+    labs(title = "Distribution des Types d'Attaques",
+         x = "Type d'attaque",
+         y = "Nombre d'incidents")
+  
+  # Évolution temporelle par type d'attaque
+  p2 <- data %>%
+    count(year, attack_type) %>%
+    ggplot(aes(x = year, y = n, color = attack_type)) +
+    geom_line() +
+    theme_minimal() +
+    labs(title = "Évolution des Types d'Attaques dans le Temps",
+         x = "Année",
+         y = "Nombre d'incidents",
+         color = "Type d'attaque")
+  
+  print(p1)
+  print(p2)
+  # ==============================================================================
+  #                    VISUALISATIONS DÉTAILLÉES DES DONNÉES GTD
+  # ==============================================================================
+  
+  library(tidyverse)
+  library(corrplot)
+  library(gridExtra)
+  library(scales)
+  library(viridis)
+  library(maps)
+  
+  # -----------------------------------------------------------------------------
+  #                    1. DISTRIBUTIONS ET TENDANCES GÉNÉRALES
+  # -----------------------------------------------------------------------------
+  
+  plot_attack_distributions <- function(data) {
+    # Distribution par type d'attaque
+    p1 <- ggplot(data, aes(x = reorder(attack_type, attack_type, function(x) length(x)))) +
+      geom_bar(aes(fill = ..count..)) +
+      scale_fill_viridis() +
+      coord_flip() +
+      theme_minimal() +
+      labs(title = "Distribution des Types d'Attaques",
+           x = "Type d'attaque",
+           y = "Nombre d'incidents")
+    
+    # Évolution temporelle par type d'attaque
+    p2 <- data %>%
+      count(year, attack_type) %>%
+      ggplot(aes(x = year, y = n, color = attack_type)) +
+      geom_line() +
+      theme_minimal() +
+      labs(title = "Évolution des Types d'Attaques dans le Temps",
+           x = "Année",
+           y = "Nombre d'incidents",
+           color = "Type d'attaque")
+    
+    print(p1)
+    print(p2)
+  }
+  
+  # -----------------------------------------------------------------------------
+  #                    2. ANALYSE GÉOGRAPHIQUE
+  # -----------------------------------------------------------------------------
+  
+  plot_geographical_analysis <- function(data) {
+    # Distribution par région
+    p1 <- ggplot(data, aes(x = reorder(region, region, function(x) length(x)))) +
+      geom_bar(aes(fill = ..count..)) +
+      scale_fill_viridis() +
+      coord_flip() +
+      theme_minimal() +
+      labs(title = "Nombre d'Incidents par Région",
+           x = "Région",
+           y = "Nombre d'incidents")
+    
+    # Carte des incidents
+    world <- map_data("world")
+    p2 <- ggplot() +
+      geom_map(data = world, map = world,
+               aes(long, lat, map_id = region),
+               color = "white", fill = "lightgray") +
+      geom_point(data = data,
+                 aes(x = longitude, y = latitude, color = killed),
+                 alpha = 0.5) +
+      scale_color_viridis() +
+      theme_minimal() +
+      labs(title = "Distribution Géographique des Incidents",
+           color = "Nombre de victimes")
+    
+    print(p1)
+    print(p2)
+  }
+  
+  # -----------------------------------------------------------------------------
+  #                    3. ANALYSE DES VICTIMES
+  # -----------------------------------------------------------------------------
+  
+  plot_casualty_analysis <- function(data) {
+    # Distribution des victimes
+    p1 <- ggplot(data, aes(x = killed)) +
+      geom_histogram(bins = 50, fill = "darkred", alpha = 0.7) +
+      scale_x_log10() +
+      theme_minimal() +
+      labs(title = "Distribution du Nombre de Victimes (échelle log)",
+           x = "Nombre de victimes",
+           y = "Fréquence")
+    
+    # Victimes par région
+    p2 <- data %>%
+      group_by(region) %>%
+      summarize(total_killed = sum(killed, na.rm = TRUE)) %>%
+      ggplot(aes(x = reorder(region, total_killed), y = total_killed)) +
+      geom_col(fill = "darkred", alpha = 0.7) +
+      coord_flip() +
+      theme_minimal() +
+      labs(title = "Nombre Total de Victimes par Région",
+           x = "Région",
+           y = "Nombre total de victimes")
+    
+    print(p1)
+    print(p2)
+  }
+  
+  # -----------------------------------------------------------------------------
+  #                    4. ANALYSE DE CORRÉLATION
+  # -----------------------------------------------------------------------------
+  
+  plot_correlation_analysis <- function(data) {
+    # Matrice de corrélation
+    numeric_data <- data %>%
+      select(killed, wounded, year) %>%
+      cor(use = "complete.obs")
+    
+    corrplot(numeric_data,
+             method = "color",
+             type = "upper",
+             addCoef.col = "black",
+             tl.col = "black",
+             tl.srt = 45,
+             title = "Matrice de Corrélation")
+    
+    # Relation entre tués et blessés
+    p <- ggplot(data, aes(x = killed, y = wounded)) +
+      geom_point(alpha = 0.5, color = "darkred") +
+      geom_smooth(method = "lm", color = "blue") +
+      scale_x_log10() +
+      scale_y_log10() +
+      theme_minimal() +
+      labs(title = "Relation entre Nombre de Tués et de Blessés",
+           x = "Nombre de tués (log)",
+           y = "Nombre de blessés (log)")
+    
+    print(p)
+  }
+  
+  # -----------------------------------------------------------------------------
+  #                    5. ANALYSE TEMPORELLE
+  # -----------------------------------------------------------------------------
+  
+  plot_temporal_analysis <- function(data) {
+    # Tendance annuelle
+    p1 <- data %>%
+      count(year) %>%
+      ggplot(aes(x = year, y = n)) +
+      geom_line(color = "darkred") +
+      geom_smooth(method = "loess", color = "blue") +
+      theme_minimal() +
+      labs(title = "Évolution du Nombre d'Incidents par Année",
+           x = "Année",
+           y = "Nombre d'incidents")
+    
+    print(p1)
+  }
+  
+  # -----------------------------------------------------------------------------
+  #                    6. FONCTION PRINCIPALE
+  # -----------------------------------------------------------------------------
+  
+  main <- function() {
+    # Chargement des données
+    data_path <- "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/processed/gtd_clean"
+    
+    # Lire les données
+    if (file.exists(data_path)) {
+      data <- read_csv(data_path)
+      message("Données chargées avec succès!")
+    } else {
+      stop("Le fichier gtd_clean est introuvable. Vérifiez le chemin.")
+    }
+    
+    # Création des visualisations
+    message("1. Création des graphiques de distribution...")
+    plot_attack_distributions(data)
+    
+    message("2. Création des graphiques géographiques...")
+    plot_geographical_analysis(data)
+    
+    message("3. Création des graphiques de victimes...")
+    plot_casualty_analysis(data)
+    
+    message("4. Création des graphiques de corrélation...")
+    plot_correlation_analysis(data)
+    
+    message("5. Création des graphiques temporels...")
+    plot_temporal_analysis(data)
+    
+    message("\nToutes les visualisations ont été générées!")
+  }
+  
+  # Exécution si le script est lancé directement
+  if (!interactive()) {
+    main()
+  }
+  
+
+```
+

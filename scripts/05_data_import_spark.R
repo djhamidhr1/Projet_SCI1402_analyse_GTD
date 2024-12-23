@@ -1,0 +1,170 @@
+# ==============================================================================
+#                 IMPORTATION ET TRAITEMENT DES DONNÉES AVEC SPARK
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+#                1. CONFIGURATION INITIALE
+# -----------------------------------------------------------------------------
+
+# 1.1 Chargement des packages nécessaires
+library(tidyverse)  # Manipulation des données
+library(sparklyr)   # Interface avec Apache Spark
+library(arrow)      # Manipulation des fichiers Parquet
+library(readr)      # Lecture rapide des fichiers CSV
+library(ggplot2)    # Visualisation des données
+
+# 1.2 Configuration des chemins d'accès
+PATHS <- list(
+  RAW_DATA = "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/raw/globalterrorismdb_0718dist.csv",
+  PROCESSED_CSV = "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/processed/gtd_clean.csv",
+  PROCESSED_PARQUET = "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/processed/gtd_clean.parquet"
+)
+
+# 1.3 Création des répertoires nécessaires
+for (path in PATHS) {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+}
+
+# 1.4 Configuration Spark
+sc <- spark_connect(master = "local")
+
+# -----------------------------------------------------------------------------
+#                2. FONCTIONS D'IMPORTATION ET NETTOYAGE
+# -----------------------------------------------------------------------------
+
+# 2.1 Importation avec Spark
+import_with_spark <- function(file_path) {
+  message("\n--- Importation des données avec Spark ---")
+  tryCatch({
+    data <- spark_read_csv(
+      sc, 
+      name = "gtd_data", 
+      path = file_path, 
+      infer_schema = TRUE, 
+      memory = FALSE
+    ) %>%
+      select(
+        year = iyear, month = imonth, day = iday,
+        country = country_txt, region = region_txt, city,
+        latitude, longitude, attack_type = attacktype1_txt,
+        target_type = targtype1_txt, weapon_type = weaptype1_txt,
+        killed = nkill, wounded = nwound, property, success
+      ) %>%
+      mutate(
+        killed = as.numeric(killed),
+        wounded = as.numeric(wounded),
+        property = as.numeric(property)
+      )
+    message("Importation réussie avec Spark!")
+    return(data)
+  }, error = function(e) {
+    message("Erreur lors de l'importation Spark: ", e$message)
+    return(NULL)
+  })
+}
+
+# 2.2 Traitement des valeurs manquantes
+clean_data <- function(data) {
+  message("\n--- Nettoyage des valeurs manquantes ---")
+  data <- data %>%
+    mutate(
+      killed = ifelse(is.na(killed), 0, killed),
+      wounded = ifelse(is.na(wounded), 0, wounded),
+      property = ifelse(is.na(property), 0, property)
+    )
+  return(data)
+}
+
+# -----------------------------------------------------------------------------
+#                3. AFFICHAGE DES DONNÉES
+# -----------------------------------------------------------------------------
+
+afficher_donnees <- function(data) {
+  message("\n--- Aperçu des données ---")
+  data %>% head(10) %>% collect() %>% print()
+  print(summary(collect(data)))
+}
+
+# -----------------------------------------------------------------------------
+#                4. SAUVEGARDE DES DONNÉES
+# -----------------------------------------------------------------------------
+
+store_data <- function(data, output_path, format = "csv") {
+  message(sprintf("\n--- Sauvegarde des données en format %s ---", format))
+  tryCatch({
+    if (format == "parquet") {
+      spark_write_parquet(data, output_path, mode = "overwrite")
+    } else if (format == "csv") {
+      spark_write_csv(data, output_path, mode = "overwrite")
+    }
+    message("Données sauvegardées avec succès dans : ", output_path)
+  }, error = function(e) {
+    message("Erreur lors de la sauvegarde: ", e$message)
+  })
+}
+
+# -----------------------------------------------------------------------------
+#                5. VISUALISATION DES DONNÉES
+# -----------------------------------------------------------------------------
+
+visualiser_donnees <- function(data) {
+  message("\n--- Visualisation des attaques par année ---")
+  data_r <- data %>% collect()
+  ggplot(data_r, aes(x = year)) +
+    geom_bar() +
+    labs(
+      title = "Nombre d'attaques terroristes par année",
+      x = "Année",
+      y = "Nombre d'attaques"
+    ) +
+    theme_minimal()
+}
+
+# -----------------------------------------------------------------------------
+#                6. EXÉCUTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
+main <- function() {
+  message("\n=== Début du traitement des données ===")
+  
+  # Importation des données
+  data <- import_with_spark(PATHS$RAW_DATA)
+  
+  if (!is.null(data)) {
+    # Nettoyage des données
+    data <- clean_data(data)
+    
+    # Affichage des données
+    afficher_donnees(data)
+    
+    # Sauvegarde des données
+    store_data(data, PATHS$PROCESSED_CSV, "csv")
+    store_data(data, PATHS$PROCESSED_PARQUET, "parquet")
+    
+    # Visualisation
+    visualiser_donnees(data)
+  } else {
+    message("Aucune donnée importée. Vérifiez le chemin d'accès.")
+  }
+  
+  message("\n=== Fin du traitement des données ===")
+}
+
+# -----------------------------------------------------------------------------
+#                7. LANCEMENT DU SCRIPT
+# -----------------------------------------------------------------------------
+
+if (!interactive()) {
+  main()
+} else {
+  message("\nExécution en mode interactif...")
+  data_test <- import_with_spark(PATHS$RAW_DATA)
+  data_test <- clean_data(data_test)
+  afficher_donnees(data_test)
+  visualiser_donnees(data_test)
+}
+
+# -----------------------------------------------------------------------------
+#                8. FERMETURE DE LA CONNEXION SPARK
+# -----------------------------------------------------------------------------
+spark_disconnect(sc)

@@ -1,0 +1,160 @@
+---
+title: "  MODELILASION DE PREDICTIVE AVEC ARIMA"
+output: html_document
+date: "2024-11-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+# ==============================================================================
+#                    MODELE DE PREDICTION AVEC ARIMA
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+#                    1. CHARGEMENT DES PACKAGES
+# -----------------------------------------------------------------------------
+
+library(tidyverse)      # Manipulation des données
+library(lubridate)      # Manipulation des dates
+library(forecast)       # Modélisation ARIMA et prévisions
+library(tseries)        # Test ADF (Augmented Dickey-Fuller)
+library(ggplot2)        # Visualisation
+library(gridExtra)      # Affichage multiple
+library(scales)         # Mise en forme des axes
+
+# -----------------------------------------------------------------------------
+#                    2. CHARGEMENT ET PRÉPARATION DES DONNÉES
+# -----------------------------------------------------------------------------
+
+# Spécifier le chemin du fichier
+data_path <- "C:/Users/digor/OneDrive/Documents/Projet_SCI1402_analyse_GTD/data/processed/gtd_clean.csv"
+
+# Charger les données
+gtd_data <- read.csv(data_path, stringsAsFactors = FALSE)
+
+# Convertir 'nkill' en numérique en gérant les erreurs
+gtd_data$nkill <- as.numeric(gtd_data$nkill)
+
+# Création de la colonne 'date' à partir des colonnes 'iyear', 'imonth', 'iday'
+gtd_data <- gtd_data %>%
+  filter(!is.na(iyear) & !is.na(imonth) & !is.na(iday)) %>%
+  mutate(
+    date = as.Date(paste(iyear, imonth, iday, sep = "-"), format = "%Y-%m-%d")
+  )
+
+# Agréger les données par jour
+daily_data <- gtd_data %>%
+  group_by(date) %>%
+  summarise(total_killed = sum(nkill, na.rm = TRUE)) %>%
+  arrange(date)
+
+# Vérification des premières lignes
+print(head(daily_data))
+
+# ------------------------------
+# 3. TRANSFORMATION BOX-COX
+# ------------------------------
+# Ajouter une constante pour éviter les zéros
+daily_data$total_killed_shifted <- daily_data$total_killed + 0.01
+
+# Transformation Box-Cox
+lambda <- BoxCox.lambda(daily_data$total_killed_shifted)
+daily_data$transformed <- BoxCox(daily_data$total_killed_shifted, lambda)
+
+# Visualisation des données avant et après transformation
+par(mfrow = c(2, 1))
+plot(daily_data$date, daily_data$total_killed_shifted, type = "l", col = "blue",
+     main = "Données Originales", xlab = "Date", ylab = "Total Victimes")
+plot(daily_data$date, daily_data$transformed, type = "l", col = "red",
+     main = "Données Transformées (Box-Cox)", xlab = "Date", ylab = "Transformées")
+par(mfrow = c(1, 1))
+
+# ------------------------------
+# 4. TEST DE STATIONNARITÉ ADF
+# ------------------------------
+cat("\n=== Test de Stationnarité ADF ===\n")
+adf_test <- adf.test(daily_data$transformed, alternative = "stationary")
+print(adf_test)
+
+# ------------------------------
+# 5. DIFFÉRENCIATION SI NÉCESSAIRE
+# ------------------------------
+if (adf_test$p.value > 0.05) {
+  # Différencier les données si elles ne sont pas stationnaires
+  diff_data <- diff(daily_data$transformed)
+  daily_data$diff_transformed <- c(NA, diff_data)
+  
+  # Visualisation de la série différenciée
+  plot(daily_data$date[-1], diff_data, type = "l", col = "purple",
+       main = "Série Différenciée", xlab = "Date", ylab = "Différenciée")
+  
+  # Test ADF sur la série différenciée
+  adf_test_diff <- adf.test(diff_data, alternative = "stationary")
+  print(adf_test_diff)
+} else {
+  # Si les données sont déjà stationnaires
+  cat("\n=== La série est déjà stationnaire. Pas besoin de différenciation. ===\n")
+  diff_data <- daily_data$transformed  # Utiliser les données transformées directement
+}
+
+# ------------------------------
+# 6. VISUALISATION DES ACF ET PACF
+# ------------------------------
+par(mfrow = c(1, 2))
+acf(diff(diff_data), main = "ACF de la Série Différenciée")
+pacf(diff(diff_data), main = "PACF de la Série Différenciée")
+par(mfrow = c(1, 1))
+
+# ------------------------------
+# 7. AJUSTEMENT DU MODÈLE ARIMA
+# ------------------------------
+fit_arima <- auto.arima(daily_data$transformed, seasonal = FALSE, stepwise = TRUE, approximation = FALSE)
+cat("\n=== Résumé du Modèle ARIMA ===\n")
+print(summary(fit_arima))
+
+# Vérification des résidus
+checkresiduals(fit_arima)
+
+# ------------------------------
+# 8. PRÉDICTION SUR 14 JOURS
+# ------------------------------
+forecast_arima <- forecast(fit_arima, h = 14)
+
+# Visualisation des prédictions
+autoplot(forecast_arima) +
+  labs(title = "Prédictions ARIMA sur 14 jours", x = "Temps", y = "Valeur Transformée") +
+  theme_minimal()
+
+
+
+# ------------------------------
+# 9. PRÉDICTION À 1 AN ET 5 ANS
+# ------------------------------
+# Prédiction pour 1 an (365 jours) et 5 ans (1825 jours)
+forecast_1_year <- forecast(fit_arima, h = 365)
+forecast_5_years <- forecast(fit_arima, h = 1825)
+
+# Visualisation des prédictions
+p1 <- autoplot(forecast_1_year) +
+  labs(title = "Prédiction ARIMA sur 1 An", x = "Date", y = "Valeur Transformée") +
+  theme_minimal()
+
+p2 <- autoplot(forecast_5_years) +
+  labs(title = "Prédiction ARIMA sur 5 Ans", x = "Date", y = "Valeur Transformée") +
+  theme_minimal()
+
+grid.arrange(p1, p2, ncol = 1)
+
+
+# ------------------------------
+# FIN DU SCRIPT
+# ------------------------------
+
+
+```
+
