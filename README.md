@@ -72,6 +72,7 @@ source("scripts/04_data_import_spark.R")
 ### Contact
 Réalisé par HAMID DIGORGORD  
 Ressource à l'encadrement : Fatima Bensalma
+
 TÉLUQ - 2024
 
 
